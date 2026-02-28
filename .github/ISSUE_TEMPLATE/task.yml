@@ -57,10 +57,18 @@ body:
       label: Agent Role
       description: Which role should handle this task
       options:
-        - Coder
+        # Core roles
+        - Planner
         - Architect
+        - Coder
         - Tester
-        - Documenter
+        - Reviewer
         - Security Auditor
+        - Documenter
+        # Optional / specialized roles
+        - Triager
+        - DevOps
+        - Dependency Manager
+        - Refactorer
     validations:
       required: true

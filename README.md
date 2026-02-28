@@ -48,12 +48,19 @@ teamwork/
 │       ├── dependency-update.md
 │       ├── documentation.md
 │       ├── spike.md
-│       └── release.md
+│       ├── release.md
+│       └── rollback.md
 ├── docs/                          # Documentation
 │   ├── onboarding.md              # Getting started for humans and agents
 │   ├── conventions.md             # Code, git, and testing standards
 │   ├── glossary.md                # Framework terminology
-│   └── architecture.md            # ADRs and design decisions
+│   ├── architecture.md            # ADRs and design decisions
+│   ├── workflow-selector.md       # Guide for choosing the right workflow
+│   ├── conflict-resolution.md     # Resolving conflicting instructions
+│   ├── secrets-policy.md          # Rules for handling secrets and credentials
+│   ├── cost-policy.md             # Guidelines for managing AI agent costs
+│   └── decisions/                 # Architecture Decision Records (ADRs)
+│       └── 001-role-based-agent-framework.md
 ├── scripts/                       # Tooling (called by Makefile)
 │   ├── setup.sh                   # Dev environment setup
 │   ├── lint.sh                    # Run linters
@@ -65,6 +72,8 @@ teamwork/
 │   ├── ISSUE_TEMPLATE/            # Issue templates (bug, task, planning)
 │   ├── PULL_REQUEST_TEMPLATE.md   # PR template
 │   └── copilot-instructions.md   # GitHub Copilot custom instructions
+├── MEMORY.md                      # Project context (read at session start)
+├── CHANGELOG.md                   # Project changelog
 ├── Makefile                       # Central command interface
 ├── CLAUDE.md                      # Claude Code custom instructions
 ├── .cursorrules                   # Cursor custom instructions
@@ -91,7 +100,7 @@ Four optional roles are available in [`agents/roles/optional/`](agents/roles/opt
 
 ## Workflows
 
-Nine workflows define how roles coordinate to deliver work end-to-end.
+Ten workflows define how roles coordinate to deliver work end-to-end.
 
 | Workflow | File | When to Use |
 |----------|------|-------------|
@@ -104,6 +113,7 @@ Nine workflows define how roles coordinate to deliver work end-to-end.
 | Documentation | [`documentation.md`](agents/workflows/documentation.md) | Standalone documentation creation or updates |
 | Spike | [`spike.md`](agents/workflows/spike.md) | Research or technical investigation |
 | Release | [`release.md`](agents/workflows/release.md) | Preparing and publishing a release |
+| Rollback | [`rollback.md`](agents/workflows/rollback.md) | Rolling back failed deployments or changes |
 
 The **feature workflow** is the most common and follows this progression:
 

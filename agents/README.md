@@ -34,6 +34,7 @@ Roles don't operate in isolation. Workflows define how roles hand off work to ea
 | Documentation | [workflows/documentation.md](workflows/documentation.md) | Standalone documentation creation or updates |
 | Spike | [workflows/spike.md](workflows/spike.md) | Research or technical investigation |
 | Release | [workflows/release.md](workflows/release.md) | Preparing and publishing a release |
+| Rollback | [workflows/rollback.md](workflows/rollback.md) | Rolling back failed deployments or changes |
 
 ## Core Roles
 

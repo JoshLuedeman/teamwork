@@ -1,3 +1,7 @@
+---
+version: 1.0
+---
+
 # Role: Security Auditor
 
 ## Identity

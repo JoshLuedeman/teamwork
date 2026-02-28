@@ -4,6 +4,8 @@ Teamwork is an agent-native development template that structures AI-human collab
 
 ## First Steps (Always Do These)
 
+0. **Read project context.** Start every session by reading `MEMORY.md` for current project state, recent decisions, and active context.
+
 1. **Identify your role.** Determine which role you are performing and read the matching file in `agents/roles/`:
    - `planner.md` — Break goals into tasks. Never write code.
    - `architect.md` — Design systems, write ADRs. Never write code.
@@ -31,6 +33,7 @@ For multi-step tasks, check `agents/workflows/` for structured guides:
 - `documentation.md` — Standalone documentation updates
 - `spike.md` — Research or technical investigation
 - `release.md` — Preparing and publishing releases
+- `rollback.md` — Rolling back failed deployments or changes
 
 Follow the workflow steps in order. Each workflow defines which roles participate and when handoffs occur.
 
@@ -59,6 +62,7 @@ Stop and ask the human when:
 ## Project Structure
 
 ```
+MEMORY.md               — Project context (read at session start)
 agents/
   roles/              — Role definitions (7 files — read yours first)
   workflows/          — Step-by-step workflow guides
@@ -66,6 +70,9 @@ docs/
   conventions.md      — Coding standards and project conventions
   architecture.md     — Architecture Decision Records (ADRs)
   glossary.md         — Terminology definitions
+  conflict-resolution.md — How to resolve conflicting instructions
+  secrets-policy.md   — Rules for handling secrets and credentials
+  cost-policy.md      — Guidelines for managing AI agent costs
 ```
 
 ## Tips

@@ -39,6 +39,25 @@ body:
       required: false
 
   - type: dropdown
+    id: workflow-type
+    attributes:
+      label: Workflow Type
+      description: Which workflow fits this goal? See agents/workflows/ for details on each workflow.
+      options:
+        - Feature
+        - Bugfix
+        - Refactor
+        - Hotfix
+        - Security Response
+        - Dependency Update
+        - Documentation
+        - Spike
+        - Release
+        - Not Sure
+    validations:
+      required: false
+
+  - type: dropdown
     id: scope
     attributes:
       label: Scope

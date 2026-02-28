@@ -97,3 +97,38 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 - Always commit lockfiles (`package-lock.json`, `poetry.lock`, `go.sum`, etc.)
 - Never manually edit lockfiles — regenerate them with the package manager
+
+## Acceptance Criteria
+
+### Format
+
+Use checkbox format in issue descriptions so progress is trackable:
+
+```
+- [ ] Criterion
+```
+
+Each criterion must be **testable and verifiable** — if you can't write a test or manually confirm it, rewrite it until you can.
+
+### Behavioral Criteria
+
+For criteria that describe system behavior, use GIVEN/WHEN/THEN:
+
+```
+- [ ] GIVEN <precondition> WHEN <action> THEN <expected result>
+```
+
+### Example
+
+```
+- [ ] Users can log in with email and password
+- [ ] GIVEN an invalid password WHEN the user submits login THEN a 401 error is returned
+- [ ] Login endpoint responds in under 200ms at p95
+```
+
+### Guidelines
+
+- Write criteria before implementation begins, not after
+- Avoid vague language — "works correctly" or "handles errors" is not testable
+- Include performance criteria when relevant (response time, throughput)
+- The Tester uses these criteria as the definitive checklist for validation

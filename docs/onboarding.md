@@ -8,11 +8,12 @@ This guide covers how to get started as a new contributor — whether you're an 
 
 Read these files in order. Each one builds on the previous:
 
-1. **`README.md`** — Project purpose, structure, and high-level goals
-2. **`agents/`** — Find your role's guidance file and read it completely
-3. **`docs/conventions.md`** — Standards you must follow for code, git, and testing
-4. **`docs/glossary.md`** — Terminology used throughout the project
-5. **`docs/architecture.md`** — Understand past decisions before making new ones
+1. **`MEMORY.md`** — Current project state, recent decisions, and active context
+2. **`README.md`** — Project purpose, structure, and high-level goals
+3. **`agents/`** — Find your role's guidance file and read it completely
+4. **`docs/conventions.md`** — Standards you must follow for code, git, and testing
+5. **`docs/glossary.md`** — Terminology used throughout the project
+6. **`docs/architecture.md`** — Understand past decisions before making new ones
 
 ### Step 2: Understand Your Role
 

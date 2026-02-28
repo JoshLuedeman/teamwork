@@ -1,0 +1,44 @@
+# Cursor Rules — Teamwork
+
+Teamwork is an agent-native development template for AI-human collaboration using defined roles, workflows, and conventions.
+
+## Setup
+
+- Identify your role and read the corresponding file in `agents/roles/` (planner, architect, coder, tester, reviewer, security-auditor, documenter).
+- Read `docs/conventions.md` for coding standards, commit format, and PR rules.
+- Check `docs/architecture.md` for prior design decisions (ADRs).
+- Use terminology from `docs/glossary.md`.
+- For multi-step tasks, follow the relevant workflow in `agents/workflows/`.
+
+## Rules
+
+1. Read your role file in `agents/roles/` before starting any work.
+2. Make minimal changes — only modify what the task requires.
+3. Do not refactor unrelated code or fix unrelated issues.
+4. Run all tests before and after making changes.
+5. Write new tests for new behavior.
+6. Use conventional commits: `type(scope): description`.
+7. One task per PR. Keep PRs focused and small (~300 lines, ~10 files max).
+8. Respect role boundaries — if your role says "never write code," don't.
+9. Update documentation when changes affect behavior or APIs.
+10. Check ADRs in `docs/architecture.md` before proposing structural changes.
+
+## Escalation
+
+Stop and ask the human when:
+
+- Requirements are ambiguous or contradictory
+- Changes would affect architecture or public APIs
+- Tests fail and the fix is unclear
+- Security concerns need human judgment
+- You are unsure which role or workflow applies
+
+## Project Structure
+
+```
+agents/roles/       — Role definitions (read yours first)
+agents/workflows/   — Workflow guides (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release)
+docs/conventions.md — Coding standards
+docs/architecture.md — Architecture decisions
+docs/glossary.md    — Terminology
+```

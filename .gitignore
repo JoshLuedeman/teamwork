@@ -1,0 +1,46 @@
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Editor directories
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Dependency directories (common across languages)
+node_modules/
+vendor/
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Build output (common across languages)
+dist/
+build/
+out/
+target/
+bin/
+
+# Coverage and test output
+coverage/
+.coverage
+*.lcov
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/

@@ -22,6 +22,7 @@ A dependency update is identified through one of:
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human / Dependency Manager** | Identifies update need; classifies risk level (patch/minor vs major) | CVE alert, deprecation, new release | Update request with package, current version, target version, risk level | Risk classified; update motivation documented |
 | 2 | **Dependency Manager / Coder** | Evaluates changelog and migration guide; identifies breaking changes and required code adaptations | Update request, dependency changelog | Impact assessment: breaking changes, required code changes, risk evaluation | Breaking changes listed; adaptation scope estimated |
 | 3 | **Coder** | Updates dependency version, adapts code to breaking changes, updates lock files | Impact assessment, migration guide | PR with version bump, code adaptations, updated lock files | Dependency updated; code adapted; build passes |
@@ -29,10 +30,13 @@ A dependency update is identified through one of:
 | 5 | **Security Auditor** | Checks new dependency version for known vulnerabilities; verifies license compatibility | PR, dependency manifest, vulnerability databases | Security clearance, license check, vulnerability scan results | No known vulnerabilities; license compatible |
 | 6 | **Reviewer** | Reviews version bump, code adaptations, and test coverage for the change | PR, impact assessment, security clearance | Review decision, review comments | Change is correct; adaptations are complete; PR approved |
 | 7 | **Human** | Approves and merges the PR | Approved PR | Merged update on target branch | Dependency updated; CI passes on target branch |
+| 8 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Initiator → Dependency Manager / Coder**
 - Update request with: package name, current version, target version
@@ -96,3 +100,7 @@ Each step must produce specific artifacts before the next step can begin.
 - **Security-driven updates**: If the update is driven by a CVE, coordinate with the
   Security Vulnerability Response workflow. The dependency update may be one step within
   a broader security remediation effort.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

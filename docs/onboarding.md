@@ -24,6 +24,8 @@ Your guidance file in `agents/` defines:
 - How to hand off work to other roles
 - When to escalate instead of deciding on your own
 
+If your task involves coordinating multiple roles or managing a workflow end-to-end, see the **Orchestrator** role (`agents/roles/orchestrator.md`) for workflow coordination guidance.
+
 If your role file is missing or unclear, escalate to the human operator before proceeding.
 
 ### Step 3: Orient to the Codebase

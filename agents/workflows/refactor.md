@@ -21,6 +21,7 @@ A refactoring need is identified through one of:
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human / Reviewer / Refactorer** | Identifies the refactoring need — describes problem, affected areas, desired end state | Code smell, tech debt, friction | Refactoring request with problem, affected files, desired outcome | Problem clearly stated; affected area identified |
 | 2 | **Architect** | Defines scope, approach, and constraints; validates target design is sound | Refactoring request, architecture docs | Approach document: target design, scope, constraints, risks | Approach is sound; scope bounded; no conflict with in-flight work |
 | 3 | **Planner** | Breaks refactoring into safe incremental steps, each independently merge-safe | Approach document, dependencies | Ordered task list with per-step acceptance criteria | Each step has criteria; tests pass after each; no big-bang merge |
@@ -28,10 +29,13 @@ A refactoring need is identified through one of:
 | 5 | **Tester** | Validates behavior is unchanged, adds tests if coverage is insufficient | PR, acceptance criteria, pre-refactor results | Validation report, additional tests, equivalence confirmation | Pre-existing tests pass; new tests cover undertested paths |
 | 6 | **Reviewer** | Reviews for correctness, verifies no behavior changed, checks goal is achieved | PR, approach document, test report | Review decision, review comments | Goal achieved; no behavior changes; PR approved |
 | 7 | **Human** | Approves and merges the PR | Approved PR | Merged refactoring on target branch | Code merged; CI passes on target branch |
+| 8 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Initiator → Architect**
 - Refactoring request issue or description with:
@@ -98,3 +102,7 @@ Each step must produce specific artifacts before the next step can begin.
   APIs should involve the Documenter as an optional final step to update architecture docs.
 - **Iteration loops**: If the Reviewer requests changes, control returns to the Coder
   (step 4). The Tester re-validates after each revision to confirm equivalence.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

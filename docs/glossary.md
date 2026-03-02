@@ -22,6 +22,12 @@ The minimum standard that work must meet before it can be handed off or consider
 ### Escalation
 The process of flagging a decision, blocker, or risk that exceeds the current role's authority or expertise. Escalations route issues to the appropriate role or to a human for resolution. Agents should escalate rather than guess.
 
+### Orchestrator
+The agent role responsible for coordinating workflow execution. The orchestrator initializes workflows, dispatches roles, validates handoffs between steps, enforces quality gates, and tracks progress through `.teamwork/` state files. It never implements, designs, reviews, or tests — it only coordinates.
+
+### Protocol
+A file-based convention for coordination between agents. Protocols define the format and location of state files, handoff artifacts, memory entries, and metrics logs in the `.teamwork/` directory. Protocols are tool-agnostic — any AI tool can read and write them.
+
 ## Template for Project-Specific Terms
 
 Add terms below as your project develops. Use this format:

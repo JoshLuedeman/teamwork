@@ -21,6 +21,7 @@ A security vulnerability is discovered through one of:
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human / Security Auditor** | Receives vulnerability report; Security Auditor assesses severity (CVSS), scope, and exploitability | Vulnerability report, scan results | Severity assessment, affected components, exploitation analysis | Severity rated; scope bounded; exploitability determined |
 | 2 | **Architect** | Determines remediation approach — fix strategy, affected interfaces, breaking change risk | Severity assessment, codebase context | Remediation plan with approach, scope, and risk analysis | Approach is sound; scope is clear; breaking changes identified |
 | 3 | **Coder** | Implements fix on a private branch; may include dependency updates if the vulnerability is in a dependency | Remediation plan, affected components | PR (private) with fix, regression test, dependency updates if needed | Vulnerability patched; tests pass; no new attack surface |
@@ -29,10 +30,13 @@ A security vulnerability is discovered through one of:
 | 6 | **Reviewer** | Reviews fix for correctness, completeness, and absence of new vulnerabilities | PR, remediation verification, advisory draft | Review decision, review comments | Fix is correct and complete; PR approved |
 | 7 | **Human** | Approves and merges the PR; decides disclosure timeline | Approved PR, advisory draft | Merged fix, disclosure decision | Fix merged; disclosure plan established |
 | 8 | **Documenter** | Publishes security advisory, updates changelog, documents remediation for affected users | Merged PR, advisory draft, disclosure decision | Security advisory, changelog entry, upgrade guide (if needed) | Advisory published; users informed; upgrade path documented |
+| 9 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Reporter → Security Auditor**
 - Vulnerability description with reproduction steps or proof of concept
@@ -99,3 +103,7 @@ Each step must produce specific artifacts before the next step can begin.
   passes.
 - **CVE assignment**: The Security Auditor recommends whether a CVE should be requested.
   The Human makes the final decision and coordinates with the CVE authority if needed.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

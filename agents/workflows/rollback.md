@@ -17,6 +17,7 @@ commit or PR that needs to be reverted and the reason for the rollback.
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human / Tester** | Identifies that a merged change is causing problems — broken tests, production issue, or incorrect behavior | CI failure, production alert, user report | Incident report identifying the bad merge (commit SHA or PR number) and symptoms | Bad merge clearly identified with evidence |
 | 2 | **Human** | Decides whether to revert (rollback) or forward-fix. Choose revert when the fastest path to stability is undoing the change | Incident report, severity assessment | Decision: revert or forward-fix | Decision documented with rationale |
 | 3 | **Coder** | Creates a revert PR using `git revert` against the identified commit(s). The revert should be mechanical — no manual edits beyond resolving revert conflicts | Bad merge commit SHA, revert decision | Revert PR linked to original PR and incident | Revert PR is clean and CI passes |
@@ -24,10 +25,13 @@ commit or PR that needs to be reverted and the reason for the rollback.
 | 5 | **Reviewer** | Fast-track review — verify the revert is correct and complete. Review bar is low: the revert should be a mechanical undo | Revert PR, test results | Review approval | Revert is accurate and safe to merge |
 | 6 | **Human** | Merges the revert PR and confirms the target branch is stable | Approved revert PR | Merged revert on target branch | CI passes on target branch; stability restored |
 | 7 | **Documenter** | Files a follow-up issue to properly address the reverted change via the Bug Fix or Hotfix workflow. Updates changelog with the revert | Merged revert, original PR, incident report | Follow-up issue, changelog entry | Follow-up issue exists; changelog updated |
+| 8 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Human/Tester → Human**
 - Identification of the bad merge: commit SHA or PR number
@@ -74,3 +78,7 @@ Each step must produce specific artifacts before the next step can begin.
 - **Conflict resolution.** If `git revert` produces merge conflicts, the Coder resolves
   them minimally. If conflicts are complex, escalate to the Human — a manual rollback
   strategy may be needed.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

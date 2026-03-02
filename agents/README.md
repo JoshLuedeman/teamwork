@@ -49,6 +49,7 @@ These roles cover the essential software development lifecycle:
 | **Reviewer** | [roles/reviewer.md](roles/reviewer.md) | Reviews PRs for quality, correctness, and standards |
 | **Security Auditor** | [roles/security-auditor.md](roles/security-auditor.md) | Checks for vulnerabilities, secret leaks, and unsafe patterns |
 | **Documenter** | [roles/documenter.md](roles/documenter.md) | Keeps docs in sync with code changes |
+| **Orchestrator** | [roles/orchestrator.md](roles/orchestrator.md) | Coordinates workflows, dispatches roles, validates handoffs, enforces quality gates |
 
 ## Optional Roles
 

@@ -24,15 +24,19 @@ alone and requires hands-on investigation:
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Identifies the question or uncertainty; provides context and constraints | Technical question, project context | Investigation request with question, constraints, and time box | Question is clear; constraints stated; time box defined |
 | 2 | **Planner** | Scopes the investigation — defines what must be answered, what is out of scope, and success criteria | Investigation request | Investigation plan with specific questions, scope boundary, time box | Questions are specific and answerable; scope bounded |
 | 3 | **Architect** | Researches approaches; builds proof-of-concept or prototype if needed; evaluates trade-offs | Investigation plan, codebase context | Findings document with analysis, trade-offs, and recommendation | All scoped questions answered; trade-offs documented |
 | 4 | **Reviewer** | Evaluates the recommendation for soundness, completeness, and bias; challenges assumptions | Findings document, investigation plan | Review feedback, alternative considerations, approval or concerns | Recommendation is well-reasoned; risks acknowledged |
 | 5 | **Human** | Decides which approach to take based on the findings and review feedback | Findings document, review feedback | Decision with rationale; follow-up issues for implementation | Decision made; next steps defined |
+| 6 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Human → Planner**
 - Investigation request with:
@@ -98,3 +102,7 @@ Each step must produce specific artifacts before the next step can begin.
 - **Follow-up tracking**: The Human's decision at step 5 should produce concrete next steps —
   new issues filed for the chosen approach, ADR committed, or a decision to do nothing.
   Spikes that end without a clear decision are wasted effort.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

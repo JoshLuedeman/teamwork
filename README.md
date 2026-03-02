@@ -84,7 +84,7 @@ teamwork/
 
 ## Agent Roles
 
-Seven core roles cover the software development lifecycle. Each role file is a complete behavioral contract defining identity, responsibilities, inputs, outputs, rules, quality bar, and escalation policy.
+Eight core roles cover the software development lifecycle. Each role file is a complete behavioral contract defining identity, responsibilities, inputs, outputs, rules, quality bar, and escalation policy.
 
 | Role | File | Description |
 |------|------|-------------|
@@ -95,6 +95,7 @@ Seven core roles cover the software development lifecycle. Each role file is a c
 | Reviewer | [`reviewer.md`](agents/roles/reviewer.md) | Reviews PRs for quality, correctness, and standards |
 | Security Auditor | [`security-auditor.md`](agents/roles/security-auditor.md) | Checks for vulnerabilities, secret leaks, and unsafe patterns |
 | Documenter | [`documenter.md`](agents/roles/documenter.md) | Keeps docs in sync with code changes |
+| Orchestrator | [`orchestrator.md`](agents/roles/orchestrator.md) | Coordinates workflows, dispatches roles, validates handoffs |
 
 Four optional roles are available in [`agents/roles/optional/`](agents/roles/optional/) for projects that need them: **Triager**, **DevOps**, **Dependency Manager**, and **Refactorer**. See [`agents/README.md`](agents/README.md) for full details.
 
@@ -171,9 +172,7 @@ Everything runs locally in your development environment. No GitHub Actions are c
 
 ## Phase 2: Orchestration App
 
-This template is Phase 1 — the structural foundation. Phase 2 will introduce an orchestration CLI that coordinates agents automatically: reading the dependency graph, dispatching tasks to the right roles, tracking progress, and managing handoffs without manual intervention.
-
-Coming soon.
+Phase 2 is now in progress. Orchestration protocols have been defined, the orchestrator role has been created, and a Go CLI app is planned to automate workflow coordination, task dispatching, and handoff management.
 
 ## License
 

@@ -17,6 +17,7 @@ a clear goal statement and any known constraints or requirements.
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Creates feature request with goal, context, and constraints | Product need or idea | Feature request with goal statement and constraints | Goal is clearly stated; enough context for planning |
 | 2 | **Planner** | Decomposes goal into tasks with acceptance criteria, dependencies, and complexity estimates | Feature request | Task issues, dependency graph, milestone grouping | Every task has acceptance criteria; dependencies form a valid DAG |
 | 3 | **Architect** | Reviews tasks for feasibility, makes design decisions, creates ADR if needed | Task list, dependency graph | Feasibility assessment, design decisions, ADR (if needed) | All tasks validated as feasible; decisions documented |
@@ -26,10 +27,13 @@ a clear goal statement and any known constraints or requirements.
 | 7 | **Reviewer** | Reviews for correctness, quality, standards, test sufficiency | PR, acceptance criteria, security findings | Review decision, review comments | PR approved or actionable change requests given |
 | 8 | **Human** | Approves and merges the PR | Approved PR, review summary | Merged code on target branch | Code merged; CI passes on target branch |
 | 9 | **Documenter** | Updates README, API docs, architecture docs, changelog | Merged PR, task descriptions, ADRs | Updated docs, changelog entry | All docs reflect the new feature |
+| 10 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Human → Planner**
 - Feature request with goal statement, context, and constraints (issue or structured description)
@@ -89,3 +93,7 @@ Each step must produce specific artifacts before the next step can begin.
   the Planner picks it up. If DevOps is active, they coordinate deployment after merge.
 - **Blocked tasks**: If the Architect flags a task as infeasible, the Planner must revise
   the plan before the Coder begins. Never skip the Architect's review to save time.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

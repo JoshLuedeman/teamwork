@@ -1,0 +1,17 @@
+# Ignore build artifacts and runtime data
+bin/
+dist/
+.teamwork/metrics/
+coverage/
+*.log
+
+# Ignore git internals
+.git
+
+# Ignore editor/OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

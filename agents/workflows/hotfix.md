@@ -18,6 +18,7 @@ or production monitoring with clear evidence that production is impacted right n
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Reports production incident with symptoms, impact scope, and affected systems | Production alert, user reports | Incident report with severity, impact scope, symptoms | Impact is clear; affected system identified |
 | 2 | **Coder** | Implements the minimal fix — smallest change that resolves the incident — and writes a regression test | Incident report, production logs | PR with minimal fix and regression test | Fix addresses the symptom; regression test passes; scope is minimal |
 | 3 | **Tester** | Validates the fix resolves the incident without introducing new regressions | PR, incident report, repro steps | Validation results, smoke test confirmation | Incident resolved; no new regressions |
@@ -25,10 +26,13 @@ or production monitoring with clear evidence that production is impacted right n
 | 5 | **Reviewer** | Fast-track review — correctness and safety only, not style or structure | PR, security summary, incident report | Review decision (approve or block with reason) | Fix is correct and safe to deploy |
 | 6 | **Human** | Approves and merges the PR; coordinates deployment | Approved PR | Merged fix on target branch; deployment triggered | Fix deployed to production; incident mitigated |
 | 7 | **Documenter** | Updates changelog and incident log; notes that a follow-up root cause analysis is needed | Merged PR, incident report | Changelog entry, incident postmortem stub | Changelog updated; follow-up work tracked |
+| 8 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Human → Coder**
 - Incident report with: severity (P0/P1), affected systems, observed symptoms
@@ -83,3 +87,7 @@ Each step must produce specific artifacts before the next step can begin.
   Hotfix PRs should be labeled distinctly (e.g., `hotfix`, `P0`) for visibility.
 - **DevOps coordination**: If a DevOps agent is active, it coordinates deployment after merge
   and monitors production to confirm the fix is effective.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

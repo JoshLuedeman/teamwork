@@ -21,6 +21,7 @@ A human decides the codebase is ready for a new release. This may be driven by:
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Initiates the release; specifies target version number and included scope | Release decision, version strategy | Release request with version number, scope, target date | Version number follows conventions; scope is defined |
 | 2 | **Planner** | Reviews merged work since last release; compiles list of included changes; identifies gaps | Release request, git log, closed issues | Inclusion list (features, fixes, breaking changes), gap report | All merged work accounted for; gaps identified |
 | 3 | **Tester** | Runs full regression test suite; performs smoke tests on key user flows | Inclusion list, test suite | Regression test results, smoke test report | All tests pass; no regressions detected |
@@ -29,10 +30,13 @@ A human decides the codebase is ready for a new release. This may be driven by:
 | 6 | **Coder** | Creates release branch or tag; bumps version numbers in code and config files | Version number, release notes | Release branch/tag, version-bumped source files, PR | Version numbers consistent across all files; branch/tag created |
 | 7 | **Reviewer** | Final review — verifies changelog accuracy, version consistency, release readiness | PR, changelog, release notes, test results, security scan | Review decision, release sign-off | All artifacts consistent; no blockers; PR approved |
 | 8 | **Human** | Approves the release; merges PR; publishes release (tag, GitHub Release, package registry) | Approved PR, release notes | Published release, deployment triggered | Release published; artifacts available to users |
+| 9 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Human → Planner**
 - Release request with:
@@ -102,3 +106,7 @@ Each step must produce specific artifacts before the next step can begin.
 - **Iteration loops**: If the Reviewer finds issues (wrong version, missing changelog entry,
   test failure), control returns to the appropriate role. The Reviewer blocks the release
   until all checklist items are satisfied.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

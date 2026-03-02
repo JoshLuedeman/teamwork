@@ -23,15 +23,19 @@ A documentation gap or improvement need is identified through one of:
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Identifies documentation gap or improvement need; describes what is missing or wrong | User feedback, review notes, audit results | Doc request with scope, target audience, and priority | Scope is clear; target audience identified |
 | 2 | **Documenter** | Assesses scope — what documents are affected, what research is needed, what the deliverable looks like | Doc request, existing docs, codebase | Scope assessment with deliverable list and outline | Deliverables identified; outline drafted |
 | 3 | **Documenter** | Writes or updates the documentation; ensures accuracy by referencing code and existing docs | Scope assessment, codebase, existing docs | PR with new or updated documentation | Docs are accurate, complete, and follow project conventions |
 | 4 | **Reviewer** | Reviews documentation for technical accuracy, clarity, completeness, and consistency with codebase | PR, existing docs, relevant code | Review decision, review comments | Docs are accurate and clear; PR approved |
 | 5 | **Human** | Approves and merges the PR | Approved PR | Merged documentation on target branch | Docs merged; accessible to target audience |
+| 6 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Human → Documenter**
 - Doc request with:
@@ -90,3 +94,7 @@ Each step must produce specific artifacts before the next step can begin.
 - **Lightweight process**: This is intentionally the shortest workflow. Documentation should
   have low friction to encourage the team to keep docs current. Do not add unnecessary gates
   or approvals beyond the Reviewer and Human steps.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

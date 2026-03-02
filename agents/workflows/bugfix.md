@@ -17,6 +17,7 @@ was expected, and any steps to reproduce.
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
+| 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human / Triager** | Files or triages the bug — categorizes, assigns severity, adds repro steps | Observed defect | Bug report with severity, repro steps, affected area | Severity assigned; report is actionable |
 | 2 | **Planner** | Confirms reproduction, identifies affected components, creates fix task | Bug report | Repro confirmation, fix task with acceptance criteria | Bug reproduced; root cause area identified |
 | 3 | **Architect** | Evaluates design implications — could the fix require arch changes or indicate a systemic issue? | Bug report, repro details | Design guidance, scope boundary, systemic flag | Fix scope bounded; design concerns documented |
@@ -26,10 +27,13 @@ was expected, and any steps to reproduce.
 | 7 | **Reviewer** | Reviews fix for correctness, minimal scope, regression test quality | PR, bug report, security assessment | Review decision, review comments | Fix is correct and minimal; PR approved |
 | 8 | **Human** | Approves and merges the PR | Approved PR | Merged fix on target branch | Fix merged; CI passes on target branch |
 | 9 | **Documenter** | Updates changelog; corrects docs if bug revealed inaccuracies | Merged PR, bug report | Changelog entry, corrected docs (if needed) | Changelog updated; misleading docs corrected |
+| 10 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
 Each step must produce specific artifacts before the next step can begin.
+
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
 
 **Human/Triager → Planner**
 - Bug report issue with severity label (critical / high / medium / low)
@@ -95,3 +99,7 @@ Each step must produce specific artifacts before the next step can begin.
   to the Security Auditor.
 - **Triager shortcut**: If no Triager agent is active, the human or Planner handles initial
   categorization and severity assignment directly in step 1.
+- **Orchestrator coordination:** The orchestrator manages workflow state throughout. If any
+  quality gate fails, the orchestrator keeps the workflow at the current step and notifies
+  the responsible role. If a blocker is raised, the orchestrator sets the workflow to
+  `blocked` and escalates to the human.

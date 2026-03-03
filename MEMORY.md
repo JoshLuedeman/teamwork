@@ -24,6 +24,7 @@ Record important architectural and process decisions with rationale. Link to ADR
 they exist.
 
 - **2025-07-18:** ADR-004 proposed — `teamwork validate` command. Exits 0/1/2, supports `--json`/`--quiet`, validates config+state+handoffs+memory in one pass. See `docs/decisions/004-validate-command-design.md`.
+- **2025-07-18:** ADR-005 proposed — `teamwork install` and `teamwork update` commands. Tarball fetch (single HTTP request, no auth), manifest-based conflict detection (SHA-256 hashes), framework vs starter file classification. See `docs/decisions/005-install-update-design.md`.
 
 ## Common Mistakes
 

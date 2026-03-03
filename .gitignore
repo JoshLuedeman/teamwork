@@ -47,3 +47,5 @@ temp/
 
 # Teamwork orchestration — metrics are local runtime data
 .teamwork/metrics/*.jsonl
+.teamwork/framework-version.txt
+.teamwork/framework-manifest.json

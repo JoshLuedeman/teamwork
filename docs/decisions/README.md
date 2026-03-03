@@ -14,3 +14,4 @@ See [`docs/architecture.md`](../architecture.md) for the ADR template and guidan
 | [002](002-file-based-coordination-protocols.md) | File-Based Coordination Protocols | Accepted | 2026-03-02 |
 | [003](003-go-orchestration-app.md) | Go Orchestration Application | Accepted | 2026-03-02 |
 | [004](004-validate-command-design.md) | Validate Command Design | Proposed | 2025-07-18 |
+| [005](005-install-update-design.md) | Install and Update Command Design | Proposed | 2025-07-18 |

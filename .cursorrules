@@ -6,6 +6,7 @@ Teamwork is an agent-native development template for AI-human collaboration usin
 
 - Read `MEMORY.md` at session start for current project context.
 - Identify your role and read the corresponding file in `agents/roles/` (planner, architect, coder, tester, reviewer, security-auditor, documenter, orchestrator).
+- **If no role is specified:** Use `docs/role-selector.md`. Quick defaults: implementation → Coder, planning → Planner, review → Reviewer, multi-role → Planner.
 - Read `docs/conventions.md` for coding standards, commit format, and PR rules.
 - Check `docs/architecture.md` for prior design decisions (ADRs).
 - Use terminology from `docs/glossary.md`.

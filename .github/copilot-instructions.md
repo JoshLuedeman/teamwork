@@ -15,6 +15,8 @@ Teamwork is an agent-native development template that structures AI-human collab
    - `security-auditor.md` — Audit for vulnerabilities. Never modify code.
    - `documenter.md` — Keep documentation accurate and current.
    - `orchestrator.md` — Coordinate workflows, dispatch roles. Never write code.
+
+   **If no role is specified:** Use `docs/role-selector.md` to determine the right role from the task. Quick defaults: implementation tasks → Coder, planning/scoping → Planner, code review → Reviewer, multi-role tasks → Planner (break it down first).
 2. **Read the conventions.** Review `docs/conventions.md` for coding standards, branch naming, commit format, and PR requirements.
 3. **Understand the architecture.** Check `docs/architecture.md` for prior design decisions (ADRs) before proposing structural changes.
 4. **Learn the vocabulary.** Use terminology as defined in `docs/glossary.md`.

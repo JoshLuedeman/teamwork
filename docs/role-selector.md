@@ -86,6 +86,29 @@ Examples:
 - "Redesign the API and migrate existing clients" → **Planner** (large scope, multiple roles)
 - "Review PR #42 for security issues" → **Security Auditor** (security takes priority over general review)
 
+## Model Tier Guide
+
+Each role has a recommended model tier based on cognitive complexity. Use the cheapest model that reliably handles the role's demands (Principle of Least Power).
+
+| Role | Tier | Rationale |
+|---|---|---|
+| **Planner** | Premium | Complex goal decomposition, dependency analysis, scope judgment |
+| **Architect** | Premium | Deep tradeoff analysis, multi-system reasoning, consequential decisions |
+| **Coder** | Premium | Code generation quality, edge case handling, tool use |
+| **Tester** | Standard | Structured task (criteria → tests), bounded scope |
+| **Reviewer** | Standard | Bounded diff review, pattern matching against criteria |
+| **Security Auditor** | Premium | Specialized domain knowledge, high cost of missed vulnerabilities |
+| **Documenter** | Fast | Structured prose, summarization, low reasoning depth |
+| **Orchestrator** | Fast | Rule-following, state management, routing logic |
+
+**Tier definitions** (configure actual models in `.teamwork/config.yaml`):
+
+- **Premium** — Strongest reasoning. Use for roles where errors are expensive to fix or where deep analysis is required. Examples: Claude Opus, GPT-5.2 Codex, Gemini 2.5 Pro.
+- **Standard** — Balanced cost and capability. Use for roles with well-defined scope and structured inputs. Examples: Claude Sonnet, GPT-4.1, Gemini 2.5 Flash.
+- **Fast** — Optimized for speed and cost. Use for roles that follow clear rules and produce structured outputs. Examples: Claude Haiku, GPT-5 mini, Gemini 2.0 Flash.
+
+> **Cost impact:** Using fast-tier models for documenter and orchestrator (which together handle ~20% of workflow steps) can reduce overall model costs by 30-40% with no quality loss.
+
 ## Within a Workflow
 
 If you're already in an active workflow (check `.teamwork/state/`), role selection is predetermined — follow the step sequence defined in the workflow file. The orchestrator or the state file tells you which role is next.

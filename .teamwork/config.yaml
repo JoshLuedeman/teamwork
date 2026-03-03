@@ -45,6 +45,22 @@ memory:
   archive_threshold: 50             # Archive entries when file exceeds this count
   sync_to_memory_md: true           # Keep MEMORY.md in sync with structured memory
 
+# Model tier configuration
+# Map abstract tiers to actual model identifiers for your provider.
+# Roles reference tiers (premium/standard/fast) — configure actual models here.
+# See docs/role-selector.md for tier-to-role mapping and rationale.
+model_tiers:
+  premium: "claude-sonnet-4"          # Best reasoning — planning, architecture, coding, security
+  standard: "claude-sonnet-4"         # Balanced — testing, review
+  fast: "claude-haiku-4.5"            # Speed/cost — documentation, orchestration
+
+# Override the tier for specific roles (optional)
+# Uncomment to assign a specific model to a role, bypassing the tier system.
+# role_models:
+#   architect: "claude-opus-4.6"      # Upgrade architect to opus for critical projects
+#   coder: "claude-opus-4.6"          # Upgrade coder when code quality is paramount
+#   documenter: "gpt-5-mini"          # Use a different provider for docs
+
 # Multi-repo (future)
 # repos:
 #   - name: "api"

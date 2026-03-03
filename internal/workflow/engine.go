@@ -456,6 +456,57 @@ func (e *Engine) Complete(workflowID string) error {
 	return nil
 }
 
+// Cancel marks a workflow as cancelled with an optional reason.
+func (e *Engine) Cancel(workflowID, reason string) error {
+	ws, err := state.Load(e.Dir, workflowID)
+	if err != nil {
+		return fmt.Errorf("workflow: load state: %w", err)
+	}
+
+	if ws.Status == state.StatusCompleted || ws.Status == state.StatusCancelled || ws.Status == state.StatusFailed {
+		return fmt.Errorf("workflow: cannot cancel: workflow %q is already %s", workflowID, ws.Status)
+	}
+
+	ws.Cancel()
+	if err := ws.Save(e.Dir); err != nil {
+		return fmt.Errorf("workflow: save state: %w", err)
+	}
+
+	if err := metrics.Log(e.Dir, workflowID, metrics.Event{
+		Step:   ws.CurrentStep,
+		Role:   ws.CurrentRole,
+		Action: metrics.ActionCancel,
+		Detail: reason,
+	}); err != nil {
+		return fmt.Errorf("workflow: log cancel: %w", err)
+	}
+
+	return nil
+}
+
+// Fail marks a workflow as failed with a required reason.
+func (e *Engine) Fail(workflowID, reason string) error {
+	ws, err := state.Load(e.Dir, workflowID)
+	if err != nil {
+		return fmt.Errorf("workflow: load state: %w", err)
+	}
+
+	if ws.Status == state.StatusCompleted || ws.Status == state.StatusCancelled || ws.Status == state.StatusFailed {
+		return fmt.Errorf("workflow: cannot fail: workflow %q is already %s", workflowID, ws.Status)
+	}
+
+	ws.Fail(reason)
+	if err := ws.Save(e.Dir); err != nil {
+		return fmt.Errorf("workflow: save state: %w", err)
+	}
+
+	if err := metrics.LogFail(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, reason, reason); err != nil {
+		return fmt.Errorf("workflow: log fail: %w", err)
+	}
+
+	return nil
+}
+
 // Status returns all workflow states across the project.
 func (e *Engine) Status() ([]*state.WorkflowState, error) {
 	states, err := state.LoadAll(e.Dir)

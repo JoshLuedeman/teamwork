@@ -26,6 +26,7 @@ const (
 	ActionBlock       = "block"
 	ActionUnblock     = "unblock"
 	ActionDefect      = "defect"
+	ActionCancel      = "cancel"
 )
 
 // Event represents a single metrics entry logged during workflow execution.

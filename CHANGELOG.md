@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`teamwork cancel` CLI command** — Cancel active or blocked workflows with optional reason (#63)
+- **`teamwork fail` CLI command** — Mark workflows as failed with required reason (#63)
+- **`teamwork doctor` CLI command** — Environment diagnostics with actionable fix suggestions (#49)
+- **`CONTRIBUTING.md`** — Contribution guide covering setup, standards, and PR process (#56)
 - **`teamwork memory` CLI command** — `add`, `search`, `list`, `sync` subcommands for managing structured project memory (#66)
 - **`teamwork metrics` CLI command** — `summary` and `roles` subcommands for workflow analytics (#67)
 - **`teamwork repos` CLI command** — List configured repositories and their status (#73)

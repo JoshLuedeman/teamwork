@@ -227,6 +227,38 @@ teamwork complete <id>
 **Arguments:**
 - `id` — The workflow identifier
 
+### `teamwork cancel <id>`
+
+Cancel an active or blocked workflow.
+
+```bash
+teamwork cancel <id> [--reason <text>]
+```
+
+**Arguments:**
+- `id` — The workflow identifier
+
+**Flags:**
+- `--reason <text>` (or `-r`) — Explanation for the cancellation (optional)
+
+Cancellation sets the workflow to terminal `cancelled` status. It refuses to operate on already-terminal workflows (completed, cancelled, failed). State files are preserved for audit trail.
+
+### `teamwork fail <id>`
+
+Mark a workflow as failed.
+
+```bash
+teamwork fail <id> --reason <text>
+```
+
+**Arguments:**
+- `id` — The workflow identifier
+
+**Flags:**
+- `--reason <text>` (or `-r`) — Explanation for the failure (required)
+
+Failure sets the workflow to terminal `failed` status. It refuses to operate on already-terminal workflows. The reason is recorded in the state file and logged as a metrics event.
+
 ### `teamwork history <id>`
 
 Show the full history of a workflow.
@@ -249,6 +281,39 @@ teamwork dashboard
 ```
 
 Provides a terminal-based interface for monitoring and managing all workflows in real time.
+
+### `teamwork doctor`
+
+Check environment and project health.
+
+```bash
+teamwork doctor
+```
+
+Runs diagnostic checks on the development environment and project configuration, reporting issues with actionable fixes.
+
+**Checks performed:**
+- `.teamwork/` directory exists with expected subdirectories
+- `config.yaml` is valid (reuses `teamwork validate` logic)
+- Git is installed and configured (user.name, user.email)
+- AI CLI tools available (Claude, GitHub Copilot CLI)
+- GitHub CLI installed and authenticated
+- `GH_TOKEN` environment variable set
+- Go toolchain available
+
+**Output format:**
+```
+[✓] .teamwork/ directory initialized
+[✓] config.yaml valid
+[✓] Git configured (user: Josh)
+[✗] Claude CLI not found — install: npm install -g @anthropic-ai/claude-code
+[✓] GitHub CLI authenticated
+[!] GH_TOKEN not set — required for private repos
+```
+
+**Exit codes:**
+- `0` — All checks passed (warnings are OK)
+- `1` — One or more checks failed
 
 ### `teamwork memory`
 

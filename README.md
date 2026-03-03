@@ -206,8 +206,9 @@ Everything runs locally in your development environment. No GitHub Actions are c
 Phase 2 is complete. The Teamwork CLI (`teamwork`) automates workflow coordination, task dispatching, state management, and handoff validation. The CLI reads and writes protocol files in `.teamwork/` to manage workflow state, providing human visibility and control over the entire lifecycle.
 
 **Features:**
-- **Workflow management** — `teamwork start`, `status`, `next`, `approve`, `block`, `complete`, `history`
+- **Workflow management** — `teamwork start`, `status`, `next`, `approve`, `block`, `cancel`, `fail`, `complete`, `history`
 - **Validation** — `teamwork validate` with JSON output for CI integration
+- **Environment diagnostics** — `teamwork doctor` checks prerequisites and reports issues with actionable fixes
 - **Installation** — `teamwork install` and `teamwork update` for framework setup and upgrades
 - **Memory management** — `teamwork memory add`, `search`, `list`, `sync` for structured project memory
 - **Metrics reporting** — `teamwork metrics summary` and `roles` for workflow analytics

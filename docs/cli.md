@@ -6,6 +6,17 @@ The Teamwork CLI (`teamwork`) provides human oversight and control over agent wo
 
 ## Installation
 
+### GitHub CLI Extension (Recommended)
+
+The easiest way to get started is via the `gh` CLI extension:
+
+```bash
+gh extension install JoshLuedeman/gh-teamwork
+gh teamwork init
+```
+
+See [gh-teamwork Extension](#gh-teamwork-extension) below for extension commands.
+
 ### Docker (Recommended)
 
 ```bash
@@ -238,6 +249,23 @@ teamwork dashboard
 ```
 
 Provides a terminal-based interface for monitoring and managing all workflows in real time.
+
+## gh-teamwork Extension
+
+The `gh-teamwork` extension provides `gh` CLI aliases for common Teamwork commands. Install it with:
+
+```bash
+gh extension install JoshLuedeman/gh-teamwork
+```
+
+### Extension Commands
+
+| Command | Equivalent | Description |
+|---------|-----------|-------------|
+| `gh teamwork init` | `teamwork init` | Initialize `.teamwork/` directory structure |
+| `gh teamwork update` | `teamwork update` | Update Teamwork framework files to latest version |
+
+All other Teamwork commands are available via the `teamwork` CLI directly (see [Installation](#installation) to install the binary).
 
 ## Examples
 

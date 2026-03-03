@@ -15,6 +15,17 @@ AI coding agents are powerful but directionless without structure. Teamwork prov
 
 ## Quick Start
 
+### Option A: Using the gh CLI extension (recommended)
+
+If you have the [GitHub CLI](https://cli.github.com) installed:
+
+```bash
+gh extension install JoshLuedeman/gh-teamwork
+gh teamwork init
+```
+
+### Option B: Using the teamwork binary directly
+
 1. **Install the Teamwork CLI** — Build from source or use Docker:
    ```bash
    # Via go install
@@ -32,6 +43,8 @@ AI coding agents are powerful but directionless without structure. Teamwork prov
    teamwork install
    ```
    This fetches framework files and creates the `.teamwork/` directory structure.
+
+### After Installation
 
 4. **Read the onboarding guide** — [`docs/onboarding.md`](docs/onboarding.md) covers first steps for both humans and agents.
 

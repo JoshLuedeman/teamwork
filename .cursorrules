@@ -51,6 +51,16 @@ docs/secrets-policy.md — Secrets and credentials policy
 docs/cost-policy.md — AI agent cost guidelines
 ```
 
+## Model Selection
+
+After identifying your role, check its **Model Requirements** section for the recommended tier (premium, standard, or fast). Check `.teamwork/config.yaml` for model mappings.
+
+- **Higher tier needed:** Inform the user this task would benefit from a higher-tier model, or delegate to a sub-agent at the recommended model.
+- **Lower tier needed:** Proceed normally.
+- **Sub-agents available:** Route each role to the right model tier. Act as a router and dispatch sub-agents as needed.
+
+See `docs/role-selector.md` for tier-to-role mapping.
+
 ## Protocol Integration
 
 When working in a tracked workflow:

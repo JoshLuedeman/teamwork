@@ -85,6 +85,16 @@ docs/
   cost-policy.md      — Guidelines for managing AI agent costs
 ```
 
+## Model Selection
+
+After identifying your role, check its **Model Requirements** section for the recommended tier (premium, standard, or fast). Then check `.teamwork/config.yaml` for the project's model mappings.
+
+- **If the role needs a higher tier than your current model:** Delegate the work to a sub-agent using the recommended model, or inform the user that this task would benefit from a higher-tier model.
+- **If the role needs a lower tier than your current model:** Proceed normally. Being overpowered is fine — just less cost-efficient.
+- **If you can spawn sub-agents:** Use the tier system to run each role at the right model level. Act as a router on a standard model and dispatch premium or fast sub-agents as needed.
+
+See `docs/role-selector.md` for the full tier-to-role mapping table.
+
 ## Protocol Integration
 
 When working in a workflow, integrate with the `.teamwork/` protocol system:

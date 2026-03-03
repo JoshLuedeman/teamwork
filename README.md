@@ -15,10 +15,27 @@ AI coding agents are powerful but directionless without structure. Teamwork prov
 
 ## Quick Start
 
-1. **Create your repo** — Click "Use this template" on GitHub, or clone and remove the `.git` directory.
-2. **Run setup** — `make setup` runs the one-time development environment setup.
-3. **Read the onboarding guide** — [`docs/onboarding.md`](docs/onboarding.md) covers first steps for both humans and agents.
-4. **Customize for your project** — Edit the files listed in [Customization Guide](#customization-guide) below.
+1. **Install the Teamwork CLI** — Build from source or use Docker:
+   ```bash
+   # Via go install
+   go install github.com/JoshLuedeman/teamwork/cmd/teamwork@latest
+   
+   # Or via Docker
+   docker build -t teamwork .
+   alias teamwork='docker run --rm -v "$(pwd):/project" teamwork'
+   ```
+
+2. **Create your repo** — Click "Use this template" on GitHub, or clone and remove the `.git` directory.
+
+3. **Initialize Teamwork in your project** — In your new repo, run:
+   ```bash
+   teamwork install
+   ```
+   This fetches framework files and creates the `.teamwork/` directory structure.
+
+4. **Read the onboarding guide** — [`docs/onboarding.md`](docs/onboarding.md) covers first steps for both humans and agents.
+
+5. **Customize for your project** — Edit the files listed in [Customization Guide](#customization-guide) below.
 
 ## Repository Structure
 

@@ -39,6 +39,66 @@ go install github.com/JoshLuedeman/teamwork/cmd/teamwork@latest
 
 ## Commands
 
+### `teamwork install`
+
+Install Teamwork framework files into the current project.
+
+```bash
+teamwork install [flags]
+```
+
+Fetches framework files from the upstream Teamwork repository and writes them into your project directory. Creates starter files (MEMORY.md, CHANGELOG.md) if they don't exist. Use this command in a new project to get started with Teamwork.
+
+**Flags:**
+- `--source` — Source repository in `owner/repo` format (default: `JoshLuedeman/teamwork`)
+- `--ref` — Git ref to install from (branch, tag, or SHA; default: `main`)
+- `--force` — Overwrite existing installation
+
+**Example:**
+```bash
+# Install from the official Teamwork template
+teamwork install
+
+# Install from a custom fork
+teamwork install --source myorg/teamwork-template
+
+# Install from a specific version
+teamwork install --ref v1.2.0
+
+# Reinstall and overwrite existing files
+teamwork install --force
+```
+
+### `teamwork update`
+
+Update Teamwork framework files to the latest version.
+
+```bash
+teamwork update [flags]
+```
+
+Fetches the latest framework files from the upstream Teamwork repository and applies changes. Files that have been modified locally are skipped with a warning unless `--force` is set.
+
+**Flags:**
+- `--source` — Source repository in `owner/repo` format (default: `JoshLuedeman/teamwork`)
+- `--ref` — Git ref to update to (branch, tag, or SHA; default: `main`)
+- `--force` — Overwrite user-modified files without warning
+
+**Example:**
+```bash
+# Update to the latest version
+teamwork update
+
+# Update from a custom source
+teamwork update --source myorg/teamwork-template
+
+# Update to a specific version
+teamwork update --ref v1.2.0
+
+# Force update, overwriting local changes
+teamwork update --force
+```
+
 ### `teamwork init`
 
 Initialize the `.teamwork/` directory in the current project.

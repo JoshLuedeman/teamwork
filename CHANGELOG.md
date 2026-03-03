@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`teamwork memory` CLI command** — `add`, `search`, `list`, `sync` subcommands for managing structured project memory (#66)
+- **`teamwork metrics` CLI command** — `summary` and `roles` subcommands for workflow analytics (#67)
+- **`teamwork repos` CLI command** — List configured repositories and their status (#73)
+- **Defect escape rate tracking** — `defect_source` field on metrics events, `LogDefect()` function, `DefectEscapeRate()` on Summary (#68)
+- **Cost tracking in metrics** — `LogWithCost()` function, `TotalCost` aggregation in Summary (#72)
+- **Multi-repo config** — `repos` section in config.yaml with hub-spoke coordination model (#70)
+- **Repo field in workflow state** — `StepRecord` and `NextAction` track target repo (#75)
+- **Cross-repo status/next** — `teamwork status` and `teamwork next` show repo context when configured (#74, #76)
+- **Hub-spoke memory sync** — `teamwork memory sync --repo <name> --domain <domains>` copies entries between repos (#77)
+- **Tests** — Config tests for repos parsing, metrics tests for defect/cost tracking
+
+### Changed
+
+- Updated `docs/cli.md` with memory, metrics, repos, and multi-repo documentation (#78)
+- Updated `docs/protocols.md` with multi-repo hub-spoke model and repos config schema
+- Updated README with new CLI features
+
 ## [Phase 2] — 2026-03-03
 
 ### Added

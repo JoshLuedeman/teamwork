@@ -61,11 +61,12 @@ model_tiers:
 #   coder: "claude-opus-4.6"          # Upgrade coder when code quality is paramount
 #   documenter: "gpt-5-mini"          # Use a different provider for docs
 
-# Multi-repo (future)
+# Multi-repo coordination (hub-spoke model)
+# The repo where teamwork runs is the hub. Spoke repos are listed here.
 # repos:
-#   - name: "api"
-#     path: "../api"
-#     repo: "owner/api"
+#   - name: "api"                   # Short identifier used in commands
+#     path: "../api"                # Local path (relative to hub root)
+#     repo: "owner/api"            # GitHub owner/repo slug
 #   - name: "frontend"
 #     path: "../frontend"
 #     repo: "owner/frontend"

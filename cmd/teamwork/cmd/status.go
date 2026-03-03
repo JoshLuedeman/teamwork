@@ -38,13 +38,46 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	fmt.Printf("%-36s  %-10s  %-12s  %-14s  %-14s  %s\n",
-		"ID", "Type", "Status", "Current Step", "Current Role", "Updated")
-	fmt.Println("------------------------------------  ----------  ------------  --------------  --------------  --------------------")
+	// Check if any workflow has repo info on its current step.
+	hasRepo := false
+	for _, w := range workflows {
+		for _, s := range w.Steps {
+			if s.Step == w.CurrentStep && s.Repo != "" {
+				hasRepo = true
+				break
+			}
+		}
+		if hasRepo {
+			break
+		}
+	}
+
+	if hasRepo {
+		fmt.Printf("%-36s  %-10s  %-12s  %-14s  %-14s  %-12s  %s\n",
+			"ID", "Type", "Status", "Current Step", "Current Role", "Repo", "Updated")
+		fmt.Println("------------------------------------  ----------  ------------  --------------  --------------  ------------  --------------------")
+	} else {
+		fmt.Printf("%-36s  %-10s  %-12s  %-14s  %-14s  %s\n",
+			"ID", "Type", "Status", "Current Step", "Current Role", "Updated")
+		fmt.Println("------------------------------------  ----------  ------------  --------------  --------------  --------------------")
+	}
 
 	for _, w := range workflows {
-		fmt.Printf("%-36s  %-10s  %-12s  %-14d  %-14s  %s\n",
-			w.ID, w.Type, w.Status, w.CurrentStep, w.CurrentRole, w.UpdatedAt)
+		repo := ""
+		for _, s := range w.Steps {
+			if s.Step == w.CurrentStep && s.Repo != "" {
+				repo = s.Repo
+				break
+			}
+		}
+
+		if hasRepo {
+			fmt.Printf("%-36s  %-10s  %-12s  %-14d  %-14s  %-12s  %s\n",
+				w.ID, w.Type, w.Status, w.CurrentStep, w.CurrentRole, repo, w.UpdatedAt)
+		} else {
+			fmt.Printf("%-36s  %-10s  %-12s  %-14d  %-14s  %s\n",
+				w.ID, w.Type, w.Status, w.CurrentStep, w.CurrentRole, w.UpdatedAt)
+		}
 	}
 
 	return nil

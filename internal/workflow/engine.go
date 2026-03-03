@@ -41,6 +41,7 @@ type NextAction struct {
 	Role       string
 	Action     string
 	Context    string // summary from previous handoff
+	Repo       string // target repo name (empty = hub repo)
 }
 
 // Workflow definitions keyed by type, derived from state-machines.md.
@@ -240,7 +241,13 @@ func (e *Engine) Next() ([]NextAction, error) {
 			Action:     stepInfo.Action,
 		}
 
-		// Attach context from the previous handoff if available.
+		// Attach repo and context from the current/previous step records.
+		for i := len(ws.Steps) - 1; i >= 0; i-- {
+			if ws.Steps[i].Step == ws.CurrentStep && ws.Steps[i].Repo != "" {
+				na.Repo = ws.Steps[i].Repo
+				break
+			}
+		}
 		if ws.CurrentStep > 1 {
 			prevStep := ws.CurrentStep - 1
 			for i := len(ws.Steps) - 1; i >= 0; i-- {

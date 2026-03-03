@@ -17,12 +17,20 @@ type Config struct {
 	Workflows    WorkflowsConfig    `yaml:"workflows"`
 	QualityGates QualityGatesConfig `yaml:"quality_gates"`
 	Memory       MemoryConfig       `yaml:"memory"`
+	Repos        []RepoConfig       `yaml:"repos,omitempty"`
 }
 
 // ProjectConfig identifies the project.
 type ProjectConfig struct {
 	Name string `yaml:"name"`
 	Repo string `yaml:"repo"`
+}
+
+// RepoConfig describes a spoke repository in a multi-repo setup.
+type RepoConfig struct {
+	Name string `yaml:"name"` // Short identifier (e.g., "api", "frontend")
+	Path string `yaml:"path"` // Local filesystem path (relative or absolute)
+	Repo string `yaml:"repo"` // GitHub owner/repo slug
 }
 
 // RolesConfig defines which roles are active in the project.
@@ -156,4 +164,14 @@ func (c *Config) ShouldSkipStep(workflowType, role string) bool {
 		}
 	}
 	return false
+}
+
+// GetRepo returns the RepoConfig for the given name, or nil if not found.
+func (c *Config) GetRepo(name string) *RepoConfig {
+	for i := range c.Repos {
+		if c.Repos[i].Name == name {
+			return &c.Repos[i]
+		}
+	}
+	return nil
 }

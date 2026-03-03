@@ -356,11 +356,12 @@ memory:
   archive_threshold: 50             # Archive entries when file exceeds this count
   sync_to_memory_md: true           # Keep MEMORY.md in sync with structured memory
 
-# Multi-repo (future)
+# Multi-repo coordination (hub-spoke model)
+# The repo where teamwork runs is the hub. Spoke repos are listed here.
 # repos:
-#   - name: "api"
-#     path: "../api"
-#     repo: "owner/api"
+#   - name: "api"                   # Short identifier used in commands
+#     path: "../api"                # Local path (relative to hub root)
+#     repo: "owner/api"            # GitHub owner/repo slug
 #   - name: "frontend"
 #     path: "../frontend"
 #     repo: "owner/frontend"
@@ -410,3 +411,40 @@ Gates produce one of three results:
 ### Configuring Gates
 
 Projects can skip gates, add gates, or modify gate behavior in `.teamwork/config.yaml`. See the config schema above.
+
+---
+
+## Multi-Repo Coordination
+
+Teamwork supports coordinating work across multiple repositories using a **hub-and-spoke model**.
+
+### Hub-and-Spoke Model
+
+- **Hub repo** — The repository where `teamwork` is run and `.teamwork/` lives. Stores workflow state, handoffs, and memory.
+- **Spoke repos** — Additional repositories listed in the `repos:` section of `config.yaml`. Each has a name, local path, and GitHub slug.
+
+### How It Works
+
+1. Configure spoke repos in `.teamwork/config.yaml` under the `repos:` key.
+2. Use `teamwork repos` to verify configured repos are accessible.
+3. Workflow steps can target specific repos via the `repo` field in `StepRecord`.
+4. `teamwork status` and `teamwork next` show which repo each step targets.
+5. Use `teamwork memory sync --repo <name> --domain <domains>` to copy relevant memory entries from the hub to a spoke repo.
+
+### Configuration
+
+```yaml
+repos:
+  - name: "api"
+    path: "../api"
+    repo: "owner/api"
+  - name: "frontend"
+    path: "../frontend"
+    repo: "owner/frontend"
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Short identifier used in commands and state files |
+| `path` | Yes | Local filesystem path (relative to hub root or absolute) |
+| `repo` | Yes | GitHub `owner/repo` slug |

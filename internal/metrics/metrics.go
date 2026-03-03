@@ -25,6 +25,7 @@ const (
 	ActionQualityGate = "quality_gate"
 	ActionBlock       = "block"
 	ActionUnblock     = "unblock"
+	ActionDefect      = "defect"
 )
 
 // Event represents a single metrics entry logged during workflow execution.
@@ -39,6 +40,7 @@ type Event struct {
 	Result       string `json:"result,omitempty"`
 	CostEstimate string `json:"cost_estimate,omitempty"`
 	Error        string `json:"error,omitempty"`
+	DefectSource string `json:"defect_source,omitempty"`
 }
 
 // Summary aggregates metrics events for a single workflow into a high-level report.
@@ -48,7 +50,10 @@ type Summary struct {
 	StepCount       int
 	FailureCount    int
 	EscalationCount int
+	DefectCount     int
+	DefectsBySource map[string]int // defect_source → count
 	RoleDurations   map[string]int // role → total seconds
+	TotalCost       string         // aggregated cost estimate
 }
 
 // Log appends a JSONL line to the metrics file for the given workflow.
@@ -128,6 +133,30 @@ func LogGate(dir, workflowID string, step int, role, detail, result string) erro
 	})
 }
 
+// LogDefect logs a defect event with the source where the defect was found.
+// Valid defect sources: tester, reviewer, security-auditor, production, user.
+func LogDefect(dir, workflowID string, step int, role, detail, defectSource string) error {
+	return Log(dir, workflowID, Event{
+		Step:         step,
+		Role:         role,
+		Action:       ActionDefect,
+		Detail:       detail,
+		DefectSource: defectSource,
+	})
+}
+
+// LogWithCost logs a completion event that includes a cost estimate string.
+func LogWithCost(dir, workflowID string, step int, role, detail string, durationSec int, cost string) error {
+	return Log(dir, workflowID, Event{
+		Step:         step,
+		Role:         role,
+		Action:       ActionComplete,
+		Detail:       detail,
+		DurationSec:  durationSec,
+		CostEstimate: cost,
+	})
+}
+
 // Load reads all events from the JSONL metrics file for the given workflow.
 // It returns an empty slice (not an error) if the file does not exist.
 func Load(dir, workflowID string) ([]Event, error) {
@@ -163,15 +192,17 @@ func Load(dir, workflowID string) ([]Event, error) {
 // Summarize aggregates a slice of events into a Summary.
 func Summarize(events []Event) *Summary {
 	if len(events) == 0 {
-		return &Summary{RoleDurations: make(map[string]int)}
+		return &Summary{RoleDurations: make(map[string]int), DefectsBySource: make(map[string]int)}
 	}
 
 	s := &Summary{
-		WorkflowID:    events[0].Workflow,
-		RoleDurations: make(map[string]int),
+		WorkflowID:      events[0].Workflow,
+		RoleDurations:   make(map[string]int),
+		DefectsBySource: make(map[string]int),
 	}
 
 	steps := make(map[int]bool)
+	var costs []string
 	for _, ev := range events {
 		steps[ev.Step] = true
 
@@ -179,17 +210,38 @@ func Summarize(events []Event) *Summary {
 		case ActionComplete:
 			s.TotalDuration += ev.DurationSec
 			s.RoleDurations[ev.Role] += ev.DurationSec
+			if ev.CostEstimate != "" {
+				costs = append(costs, ev.CostEstimate)
+			}
 		case ActionFail:
 			s.FailureCount++
 			s.TotalDuration += ev.DurationSec
 			s.RoleDurations[ev.Role] += ev.DurationSec
 		case ActionEscalate:
 			s.EscalationCount++
+		case ActionDefect:
+			s.DefectCount++
+			if ev.DefectSource != "" {
+				s.DefectsBySource[ev.DefectSource]++
+			}
 		}
 	}
 	s.StepCount = len(steps)
 
+	if len(costs) > 0 {
+		s.TotalCost = strings.Join(costs, " + ")
+	}
+
 	return s
+}
+
+// DefectEscapeRate returns the ratio of production defects to total defects.
+// Returns 0 if there are no defects.
+func (s *Summary) DefectEscapeRate() float64 {
+	if s.DefectCount == 0 {
+		return 0
+	}
+	return float64(s.DefectsBySource["production"]) / float64(s.DefectCount)
 }
 
 // SummarizeAll reads all JSONL files in .teamwork/metrics/ and returns

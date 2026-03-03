@@ -28,7 +28,8 @@ they exist.
 - **2025-07-18:** ADR-004 — `teamwork validate` command. Exits 0/1/2, supports `--json`/`--quiet`, validates config+state+handoffs+memory in one pass. See `docs/decisions/004-validate-command-design.md`.
 - **2025-07-18:** ADR-005 — `teamwork install` and `teamwork update` commands. Tarball fetch (needs GH_TOKEN for private repos), manifest-based conflict detection (SHA-256), framework vs starter file classification. See `docs/decisions/005-install-update-design.md`.
 - **2026-03-03:** `gh-teamwork` CLI extension created at JoshLuedeman/gh-teamwork. Wraps `teamwork install`/`teamwork update` behind `gh teamwork init`/`gh teamwork update`. Falls back to Docker if binary not found.
-- **2026-03-03:** GitHub milestone numbering: Milestone #1 = pre-existing Phase 2 Orchestration App. New: #2=Phase 1 install/update, #3=Phase 2 gh extension, #4=Phase 3 GitHub App.
+- **2026-03-03:** GitHub milestone numbering: #1=Phase 2 Orchestration App (closed), #2=Phase 1 install/update (closed), #3=Phase 2 gh extension (closed), #4=Phase 3 GitHub App, #5=Phase 4 MCP Integration, #6=Backlog, #7=Phase 2.5 CLI Enhancements.
+- **2026-03-03:** Phase 2 milestone closed. All 4 planning issues (#1-#4) resolved. Context sharing fully addressed by handoff system. Memory, metrics mostly addressed; follow-up tasks in Phase 2.5 (#66-#78). Multi-repo: hub-spoke design planned with 7 sub-tasks.
 
 ## Common Mistakes
 

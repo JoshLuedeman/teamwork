@@ -209,6 +209,9 @@ Phase 2 is complete. The Teamwork CLI (`teamwork`) automates workflow coordinati
 - **Workflow management** — `teamwork start`, `status`, `next`, `approve`, `block`, `complete`, `history`
 - **Validation** — `teamwork validate` with JSON output for CI integration
 - **Installation** — `teamwork install` and `teamwork update` for framework setup and upgrades
+- **Memory management** — `teamwork memory add`, `search`, `list`, `sync` for structured project memory
+- **Metrics reporting** — `teamwork metrics summary` and `roles` for workflow analytics
+- **Multi-repo coordination** — `teamwork repos` for hub-spoke multi-repository setups
 - **GitHub CLI integration** — `gh teamwork init` and `gh teamwork update` via the `gh-teamwork` extension
 - **Interactive dashboard** — `teamwork dashboard` for real-time workflow monitoring
 

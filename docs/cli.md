@@ -250,6 +250,108 @@ teamwork dashboard
 
 Provides a terminal-based interface for monitoring and managing all workflows in real time.
 
+### `teamwork memory`
+
+Manage structured project memory.
+
+```bash
+teamwork memory <subcommand> [flags]
+```
+
+#### `teamwork memory add`
+
+Add a new memory entry.
+
+```bash
+teamwork memory add --category <cat> --domain <domains> --content <text> [flags]
+```
+
+**Flags:**
+- `--category` — Category: `patterns`, `antipatterns`, `decisions`, `feedback` (required)
+- `--domain` — Comma-separated domain tags (required)
+- `--content` — Memory content (required)
+- `--source` — Where this was learned (e.g., `PR #42`)
+- `--context` — Additional context
+
+**Example:**
+```bash
+teamwork memory add \
+  --category patterns \
+  --domain auth,api \
+  --content "Use middleware for auth checks" \
+  --source "PR #42 review"
+```
+
+#### `teamwork memory search`
+
+Search memory entries by domain.
+
+```bash
+teamwork memory search <domain>
+```
+
+**Example:**
+```bash
+teamwork memory search auth
+```
+
+#### `teamwork memory list`
+
+List all memory entries, optionally filtered by category.
+
+```bash
+teamwork memory list [--category <cat>]
+```
+
+#### `teamwork memory sync`
+
+Sync memory entries to a spoke repository by domain.
+
+```bash
+teamwork memory sync --repo <name> --domain <domains>
+```
+
+Copies entries matching the specified domains from the hub repo's memory to the target spoke repo. Requires repos to be configured in `.teamwork/config.yaml`.
+
+**Example:**
+```bash
+teamwork memory sync --repo api --domain auth,api
+```
+
+### `teamwork metrics`
+
+View workflow metrics and reports.
+
+```bash
+teamwork metrics <subcommand>
+```
+
+#### `teamwork metrics summary`
+
+Show per-workflow metric summaries including steps, duration, failures, escalations, defects, and cost estimates.
+
+```bash
+teamwork metrics summary
+```
+
+#### `teamwork metrics roles`
+
+Show per-role aggregate statistics across all workflows.
+
+```bash
+teamwork metrics roles
+```
+
+### `teamwork repos`
+
+List configured repositories and their status.
+
+```bash
+teamwork repos
+```
+
+Shows each configured spoke repository with its name, GitHub slug, local path, and status (clean, dirty, not found).
+
 ## gh-teamwork Extension
 
 The `gh-teamwork` extension provides `gh` CLI aliases for common Teamwork commands. Install it with:

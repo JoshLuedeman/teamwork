@@ -40,6 +40,9 @@ func runNext(cmd *cobra.Command, args []string) error {
 
 	for _, a := range actions {
 		fmt.Printf("Workflow: %s\n", a.WorkflowID)
+		if a.Repo != "" {
+			fmt.Printf("  Repo: %s\n", a.Repo)
+		}
 		fmt.Printf("  Step %d: [%s] %s\n", a.Step, a.Role, a.Action)
 		fmt.Println()
 	}

@@ -49,6 +49,7 @@ type StepRecord struct {
 	Completed   string `yaml:"completed,omitempty"`
 	Handoff     string `yaml:"handoff,omitempty"`
 	QualityGate string `yaml:"quality_gate,omitempty"`
+	Repo        string `yaml:"repo,omitempty"`
 }
 
 // Blocker records a reason a workflow cannot proceed.

@@ -117,8 +117,20 @@ func Path(dir, workflowID string, step int, role string) string {
 	return filepath.Join(dir, ".teamwork", "handoffs", workflowID, filename)
 }
 
+// validateWorkflowID checks that a workflow ID does not contain path traversal.
+func validateWorkflowID(id string) error {
+	cleaned := filepath.Clean(id)
+	if strings.HasPrefix(cleaned, "..") || filepath.IsAbs(cleaned) {
+		return fmt.Errorf("handoff: invalid workflow ID %q: contains path traversal", id)
+	}
+	return nil
+}
+
 // Save writes the artifact to .teamwork/handoffs/<workflow-id>/<step>-<role>.md.
 func (a *Artifact) Save(dir string) error {
+	if err := validateWorkflowID(a.WorkflowID); err != nil {
+		return err
+	}
 	p := Path(dir, a.WorkflowID, a.Step, a.Role)
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return fmt.Errorf("creating handoff directory: %w", err)

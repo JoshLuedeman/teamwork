@@ -30,6 +30,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if _, err := os.Stat(teamworkDir); err == nil {
 		fmt.Println(".teamwork/ already exists — skipping initialization.")
 		return nil
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("checking .teamwork/: %w", err)
 	}
 
 	subdirs := []string{"state", "handoffs", "memory", "metrics"}

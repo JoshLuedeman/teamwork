@@ -73,8 +73,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	if failCount > 0 {
-		fmt.Printf("%d issue(s) found, %d warning(s)\n", failCount, warnCount)
-		os.Exit(1)
+		return &ExitError{Code: 1, Message: fmt.Sprintf("%d issue(s) found, %d warning(s)", failCount, warnCount)}
 	} else if warnCount > 0 {
 		fmt.Printf("No issues found, %d warning(s)\n", warnCount)
 	} else {

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`teamwork fail` CLI command** — Mark workflows as failed with required reason (#63)
 - **`teamwork doctor` CLI command** — Environment diagnostics with actionable fix suggestions (#49)
 - **`CONTRIBUTING.md`** — Contribution guide covering setup, standards, and PR process (#56)
+- **ADR-006** — MCP integration strategy design document (#20)
 - **`teamwork memory` CLI command** — `add`, `search`, `list`, `sync` subcommands for managing structured project memory (#66)
 - **`teamwork metrics` CLI command** — `summary` and `roles` subcommands for workflow analytics (#67)
 - **`teamwork repos` CLI command** — List configured repositories and their status (#73)
@@ -26,6 +27,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Updated `docs/cli.md` with memory, metrics, repos, and multi-repo documentation (#78)
+
+### Security
+
+- **Fixed zip-slip vulnerability** in tarball extraction — path traversal via `..` now rejected (CWE-22)
+- **Fixed path traversal** via workflow IDs in state and handoff operations (CWE-22)
+- **Added file size limits** (10MB) to tarball extraction to prevent decompression bombs (CWE-400)
+- **Added HTTP timeout** (120s) to tarball fetch to prevent indefinite hangs (CWE-400)
+- **Fixed workflow ID validation** — reject `..` and absolute paths in state.Load/Save and handoff.Save
+
+### Fixed
+
+- **Fixed panic** on short commit SHA in installer (`[:12]` without length check)
+- **Fixed `os.Exit()` in cobra RunE handlers** — validate and doctor now return `ExitError` instead of calling `os.Exit` directly, enabling proper cleanup and testability
+- **Fixed `Approve()` missing metrics** — now logs `LogComplete` and `LogStart` when advancing steps
+- **Fixed latent panic** in `truncate()` when `n <= 3`
+- **Fixed `os.Stat` error handling** in init command — now properly distinguishes "not exists" from permission errors
 - Updated `docs/protocols.md` with multi-repo hub-spoke model and repos config schema
 - Updated README with new CLI features
 

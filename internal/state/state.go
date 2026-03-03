@@ -65,6 +65,15 @@ func now() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
+// validateWorkflowID checks that a workflow ID does not contain path traversal.
+func validateWorkflowID(id string) error {
+	cleaned := filepath.Clean(id)
+	if strings.HasPrefix(cleaned, "..") || filepath.IsAbs(cleaned) {
+		return fmt.Errorf("state: invalid workflow ID %q: contains path traversal", id)
+	}
+	return nil
+}
+
 // statePath returns the filesystem path for a workflow state file.
 // Workflow IDs may contain slashes, which become subdirectories.
 func statePath(dir, workflowID string) string {
@@ -91,6 +100,9 @@ func New(id, workflowType, goal string) *WorkflowState {
 
 // Load reads a workflow state file from .teamwork/state/<workflowID>.yaml.
 func Load(dir, workflowID string) (*WorkflowState, error) {
+	if err := validateWorkflowID(workflowID); err != nil {
+		return nil, err
+	}
 	p := statePath(dir, workflowID)
 	data, err := os.ReadFile(p)
 	if err != nil {
@@ -139,6 +151,9 @@ func LoadAll(dir string) ([]*WorkflowState, error) {
 // Save writes the workflow state to .teamwork/state/<id>.yaml, creating
 // parent directories as needed (workflow IDs with slashes produce subdirs).
 func (s *WorkflowState) Save(dir string) error {
+	if err := validateWorkflowID(s.ID); err != nil {
+		return err
+	}
 	p := statePath(dir, s.ID)
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return fmt.Errorf("state: mkdir %s: %w", filepath.Dir(p), err)

@@ -363,8 +363,16 @@ func (e *Engine) Approve(workflowID string) error {
 			}
 		}
 		if next != nil {
+			// Log completion of the current step.
+			if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, "Human approval", 0); err != nil {
+				return fmt.Errorf("workflow: log complete: %w", err)
+			}
 			if err := ws.AdvanceStep(ws.CurrentStep, next.Role, next.Action); err != nil {
 				return fmt.Errorf("workflow: advance step: %w", err)
+			}
+			// Log start of the next step.
+			if err := metrics.LogStart(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, next.Action); err != nil {
+				return fmt.Errorf("workflow: log next start: %w", err)
 			}
 		}
 	}

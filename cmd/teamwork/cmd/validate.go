@@ -31,9 +31,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	results, err := validate.Run(dir)
 	if err != nil {
-		// Exit code 2: cannot run validation
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(2)
+		return &ExitError{Code: 2, Message: fmt.Sprintf("Error: %v", err)}
 	}
 
 	passed := 0
@@ -66,7 +64,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	if failed > 0 {
-		os.Exit(1)
+		return &ExitError{Code: 1}
 	}
 	return nil
 }

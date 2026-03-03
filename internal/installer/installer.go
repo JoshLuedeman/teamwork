@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // FrameworkFiles is the list of path prefixes extracted from the tarball.
@@ -121,7 +122,7 @@ func Install(dir, owner, repo, ref string) error {
 		return err
 	}
 
-	fmt.Printf("Installed %d framework files, created %d starter files (version %s)\n", written, starterCreated, commitSHA[:12])
+	fmt.Printf("Installed %d framework files, created %d starter files (version %s)\n", written, starterCreated, shortSHA(commitSHA))
 	return nil
 }
 
@@ -216,7 +217,7 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		fmt.Printf("  skipped (user-modified): %s\n", p)
 	}
 	fmt.Printf("Updated %d, skipped %d (user-modified), %d already up to date (version %s)\n",
-		updated, skipped, upToDate, commitSHA[:12])
+		updated, skipped, upToDate, shortSHA(commitSHA))
 	return nil
 }
 
@@ -234,7 +235,8 @@ func fetchTarball(owner, repo, ref string) ([]File, string, error) {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 120 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, "", fmt.Errorf("HTTP GET %s: %w", apiURL, err)
 	}
@@ -287,13 +289,23 @@ func fetchTarball(owner, repo, ref string) ([]File, string, error) {
 			continue
 		}
 
+		// Prevent path traversal (zip slip).
+		relPath = filepath.Clean(relPath)
+		if relPath == "." || strings.HasPrefix(relPath, "..") || filepath.IsAbs(relPath) {
+			continue
+		}
+
 		if !isFrameworkFile(relPath) {
 			continue
 		}
 
-		data, err := io.ReadAll(tr)
+		const maxFileSize = 10 * 1024 * 1024 // 10MB
+		data, err := io.ReadAll(io.LimitReader(tr, maxFileSize+1))
 		if err != nil {
 			return nil, "", fmt.Errorf("reading %s: %w", relPath, err)
+		}
+		if int64(len(data)) > maxFileSize {
+			return nil, "", fmt.Errorf("file %s exceeds maximum size of 10MB", relPath)
 		}
 
 		files = append(files, File{Path: relPath, Data: data})
@@ -373,4 +385,12 @@ func githubToken() string {
 		return t
 	}
 	return os.Getenv("GITHUB_TOKEN")
+}
+
+// shortSHA returns the first 12 characters of a SHA, or the full string if shorter.
+func shortSHA(sha string) string {
+	if len(sha) > 12 {
+		return sha[:12]
+	}
+	return sha
 }

@@ -160,11 +160,11 @@ teamwork start <type> <goal> [flags]
 ```
 
 **Arguments:**
-- `type` — Workflow type (e.g., `feature`, `bugfix`, `refactor`, `hotfix`)
+- `type` — Workflow type: `feature`, `bugfix`, `refactor`, `hotfix`, `security-response`, `dependency-update`, `documentation`, `spike`, `release`, or `rollback`
 - `goal` — Description of what the workflow should accomplish
 
 **Flags:**
-- `--issue <number>` — Link the workflow to a GitHub issue
+- `--issue <number>` (or `-i`) — Link the workflow to a GitHub issue
 
 **Example:**
 ```bash

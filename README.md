@@ -9,9 +9,9 @@
 AI coding agents are powerful but directionless without structure. Teamwork provides that structure — roles, workflows, conventions, and quality gates — so agents can contribute reliably.
 
 - **Role-based, not tool-based.** A "coder" is a behavioral contract. Any AI agent (or a human) can fill it. Swap models, switch tools — the roles stay the same.
-- **Human as executive.** You set goals, approve results, and make judgment calls. Agents do the implementation work between those decisions.
+- **Human as executive.** You set goals, approve results, and make judgment calls. Agents do the implementation work between these decisions.
 - **Separation of concerns.** No agent both writes and reviews code. Roles have clear boundaries and explicit handoffs.
-- **Phase 1 of two.** This template is the foundation — static role files and workflows that agents read. Phase 2 will add an orchestration layer to coordinate agents automatically. See [Phase 2](#phase-2-orchestration-app) below.
+- **Phase 2 complete.** The orchestration layer is built — a Go CLI (`teamwork`) automates workflow coordination, task dispatching, validation, and handoff management. See [Phase 2](#phase-2-orchestration-app) below.
 
 ## Quick Start
 
@@ -85,6 +85,7 @@ teamwork/
 │   ├── conventions.md             # Code, git, and testing standards
 │   ├── glossary.md                # Framework terminology
 │   ├── architecture.md            # ADRs and design decisions
+│   ├── cli.md                     # Teamwork CLI command reference
 │   ├── workflow-selector.md       # Guide for choosing the right workflow
 │   ├── conflict-resolution.md     # Resolving conflicting instructions
 │   ├── secrets-policy.md          # Rules for handling secrets and credentials
@@ -202,7 +203,16 @@ Everything runs locally in your development environment. No GitHub Actions are c
 
 ## Phase 2: Orchestration App
 
-Phase 2 is now in progress. Orchestration protocols have been defined, the orchestrator role has been created, and a Go CLI app is planned to automate workflow coordination, task dispatching, and handoff management.
+Phase 2 is complete. The Teamwork CLI (`teamwork`) automates workflow coordination, task dispatching, state management, and handoff validation. The CLI reads and writes protocol files in `.teamwork/` to manage workflow state, providing human visibility and control over the entire lifecycle.
+
+**Features:**
+- **Workflow management** — `teamwork start`, `status`, `next`, `approve`, `block`, `complete`, `history`
+- **Validation** — `teamwork validate` with JSON output for CI integration
+- **Installation** — `teamwork install` and `teamwork update` for framework setup and upgrades
+- **GitHub CLI integration** — `gh teamwork init` and `gh teamwork update` via the `gh-teamwork` extension
+- **Interactive dashboard** — `teamwork dashboard` for real-time workflow monitoring
+
+See [`docs/cli.md`](docs/cli.md) for command reference and [`docs/decisions/004-validate-command-design.md`](docs/decisions/004-validate-command-design.md) and [`docs/decisions/005-install-update-design.md`](docs/decisions/005-install-update-design.md) for design details.
 
 ## License
 

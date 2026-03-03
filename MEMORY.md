@@ -12,25 +12,29 @@ Do not remove entries unless they are explicitly obsolete.
 
 ## Patterns That Work
 
-- *(No entries yet — add patterns here as they are established)*
+- **Role-model delegation:** Router (Sonnet) reads task → identifies role → spawns sub-agent with correct model tier via `task` tool `model` parameter. Works well.
+- **httptest.NewServer** for mocking GitHub tarball endpoint in installer tests — lets unit tests cover install/update without network calls.
 
 ## Patterns to Avoid
 
-- *(No entries yet — add anti-patterns here with reasons they were rejected)*
+- **gh issue create --milestone <number>** does NOT work; must use `gh api repos/.../issues` with `-F milestone=<number>`.
+- **Unauthenticated tarball fetch** fails for private repos — always set `Authorization: Bearer $GH_TOKEN` header in HTTP requests to GitHub API.
 
 ## Key Decisions
 
 Record important architectural and process decisions with rationale. Link to ADRs when
 they exist.
 
-- **2025-07-18:** ADR-004 proposed — `teamwork validate` command. Exits 0/1/2, supports `--json`/`--quiet`, validates config+state+handoffs+memory in one pass. See `docs/decisions/004-validate-command-design.md`.
-- **2025-07-18:** ADR-005 proposed — `teamwork install` and `teamwork update` commands. Tarball fetch (single HTTP request, no auth), manifest-based conflict detection (SHA-256 hashes), framework vs starter file classification. See `docs/decisions/005-install-update-design.md`.
+- **2025-07-18:** ADR-004 — `teamwork validate` command. Exits 0/1/2, supports `--json`/`--quiet`, validates config+state+handoffs+memory in one pass. See `docs/decisions/004-validate-command-design.md`.
+- **2025-07-18:** ADR-005 — `teamwork install` and `teamwork update` commands. Tarball fetch (needs GH_TOKEN for private repos), manifest-based conflict detection (SHA-256), framework vs starter file classification. See `docs/decisions/005-install-update-design.md`.
+- **2026-03-03:** `gh-teamwork` CLI extension created at JoshLuedeman/gh-teamwork. Wraps `teamwork install`/`teamwork update` behind `gh teamwork init`/`gh teamwork update`. Falls back to Docker if binary not found.
+- **2026-03-03:** GitHub milestone numbering: Milestone #1 = pre-existing Phase 2 Orchestration App. New: #2=Phase 1 install/update, #3=Phase 2 gh extension, #4=Phase 3 GitHub App.
 
 ## Common Mistakes
 
 Things agents frequently get wrong. Check this section before starting work.
 
-- *(No entries yet — add recurring issues here as they are discovered)*
+- Do not use `gh issue create --milestone` — it silently ignores the milestone. Use `gh api` instead.
 
 ## Reviewer Feedback
 

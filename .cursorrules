@@ -5,7 +5,7 @@ Teamwork is an agent-native development template for AI-human collaboration usin
 ## Setup
 
 - Read `MEMORY.md` at session start for current project context.
-- Identify your role and read the corresponding file in `agents/roles/` (planner, architect, coder, tester, reviewer, security-auditor, documenter).
+- Identify your role and read the corresponding file in `agents/roles/` (planner, architect, coder, tester, reviewer, security-auditor, documenter, orchestrator).
 - Read `docs/conventions.md` for coding standards, commit format, and PR rules.
 - Check `docs/architecture.md` for prior design decisions (ADRs).
 - Use terminology from `docs/glossary.md`.
@@ -40,10 +40,21 @@ Stop and ask the human when:
 MEMORY.md           — Project context (read at session start)
 agents/roles/       — Role definitions (read yours first)
 agents/workflows/   — Workflow guides (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release, rollback)
+.teamwork/          — Orchestration state (config, state, handoffs, memory, metrics)
 docs/conventions.md — Coding standards
 docs/architecture.md — Architecture decisions
+docs/protocols.md   — Coordination protocol specification
 docs/glossary.md    — Terminology
 docs/conflict-resolution.md — Resolving conflicting instructions
 docs/secrets-policy.md — Secrets and credentials policy
 docs/cost-policy.md — AI agent cost guidelines
 ```
+
+## Protocol Integration
+
+When working in a tracked workflow:
+1. **Start:** Check `.teamwork/state/` for your workflow. Read the previous handoff from `.teamwork/handoffs/<workflow-id>/`.
+2. **End:** Write your handoff artifact to `.teamwork/handoffs/<workflow-id>/<step>-<role>.md`. Update the state file.
+3. **Memory:** Check `.teamwork/memory/` for relevant patterns. Add new learnings when applicable.
+4. **Format:** Follow `docs/protocols.md` for all file formats.
+5. **Ad-hoc tasks:** Skip protocol integration if not part of a tracked workflow.

@@ -49,6 +49,37 @@ teamwork init
 
 Creates the `.teamwork/` directory structure with default configuration files needed for workflow coordination.
 
+### `teamwork validate`
+
+Validate the `.teamwork/` directory structure and contents.
+
+```bash
+teamwork validate [flags]
+```
+
+Checks that configuration, state files, handoff documents, and memory files are well-formed and contain required fields.
+
+**Flags:**
+- `--json` — Output results as a JSON array
+- `--quiet` — Suppress passing checks (only show failures)
+
+**Exit codes:**
+- `0` — All checks passed
+- `1` — One or more checks failed
+- `2` — Cannot run validation (e.g., `.teamwork/` directory not found)
+
+**Example:**
+```bash
+# Human-readable output
+teamwork validate
+
+# JSON output for CI pipelines
+teamwork validate --json
+
+# Only show failures
+teamwork validate --quiet
+```
+
 ### `teamwork start <type> <goal>`
 
 Start a new workflow.

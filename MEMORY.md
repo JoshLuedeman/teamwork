@@ -23,7 +23,7 @@ Do not remove entries unless they are explicitly obsolete.
 Record important architectural and process decisions with rationale. Link to ADRs when
 they exist.
 
-- *(No entries yet — add decisions here as they are made)*
+- **2025-07-18:** ADR-004 proposed — `teamwork validate` command. Exits 0/1/2, supports `--json`/`--quiet`, validates config+state+handoffs+memory in one pass. See `docs/decisions/004-validate-command-design.md`.
 
 ## Common Mistakes
 

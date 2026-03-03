@@ -223,15 +223,25 @@ func Update(dir, owner, repo, ref string, force bool) error {
 // fetchTarball downloads the repo tarball and extracts framework files.
 // Returns the extracted files, the commit SHA, and any error.
 func fetchTarball(owner, repo, ref string) ([]File, string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", owner, repo, ref)
-	resp, err := http.Get(url)
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", owner, repo, ref)
+
+	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("HTTP GET %s: %w", url, err)
+		return nil, "", fmt.Errorf("build request: %w", err)
+	}
+	// Use GH_TOKEN or GITHUB_TOKEN if available (required for private repos).
+	if token := githubToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("HTTP GET %s: %w", apiURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
+		return nil, "", fmt.Errorf("HTTP %d from %s", resp.StatusCode, apiURL)
 	}
 
 	gz, err := gzip.NewReader(resp.Body)
@@ -355,4 +365,12 @@ func writeVersion(dir string, sha string) error {
 func sha256hex(data []byte) string {
 	h := sha256.Sum256(data)
 	return hex.EncodeToString(h[:])
+}
+
+// githubToken returns the GitHub token from environment variables, or empty string.
+func githubToken() string {
+	if t := os.Getenv("GH_TOKEN"); t != "" {
+		return t
+	}
+	return os.Getenv("GITHUB_TOKEN")
 }

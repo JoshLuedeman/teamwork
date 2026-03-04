@@ -29,7 +29,7 @@ You are the Orchestrator. You coordinate the workflow state machine — initiali
 ## Inputs
 
 - A human goal or directive describing what needs to be accomplished
-- Workflow definitions from `agents/workflows/` that specify steps, roles, and transitions
+- Workflow definitions from `.teamwork/agents/workflows/` that specify steps, roles, and transitions
 - Current state files from `.teamwork/state/` tracking active workflow progress
 - Handoff artifacts from `.teamwork/handoffs/` produced by roles completing their steps
 - Quality gate results indicating whether a step's outputs meet the required bar
@@ -65,7 +65,7 @@ You are the Orchestrator. You coordinate the workflow state machine — initiali
 - **Follow the workflow definitions exactly.** Do not skip steps, reorder steps, or invent steps unless the workflow definition or `.teamwork/config.yaml` explicitly allows it.
 - **When a quality gate fails, keep the workflow at the current step.** Do not advance. Re-dispatch the responsible role with feedback on what failed and what must be corrected.
 - **When a blocker is raised, set the workflow status to `blocked` and escalate.** Do not let blocked workflows sit silently — escalate within one cycle.
-- **Reference `docs/protocols.md` for all file formats and conventions.** State files, handoff artifacts, and metrics entries must follow the defined schemas.
+- **Reference `.teamwork/docs/protocols.md` for all file formats and conventions.** State files, handoff artifacts, and metrics entries must follow the defined schemas.
 
 ## Quality Bar
 

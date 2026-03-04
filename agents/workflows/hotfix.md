@@ -32,7 +32,7 @@ or production monitoring with clear evidence that production is impacted right n
 
 Each step must produce specific artifacts before the next step can begin.
 
-The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `.teamwork/docs/protocols.md`.
 
 **Human → Coder**
 - Incident report with: severity (P0/P1), affected systems, observed symptoms

@@ -21,11 +21,27 @@ import (
 // These are overwritten on update (if unchanged by user).
 var FrameworkFiles = []string{
 	"agents/",
-	"docs/",
+	"docs/architecture.md",
+	"docs/conflict-resolution.md",
+	"docs/conventions.md",
+	"docs/cost-policy.md",
+	"docs/glossary.md",
+	"docs/protocols.md",
+	"docs/role-selector.md",
+	"docs/secrets-policy.md",
+	"docs/workflow-selector.md",
 	".github/copilot-instructions.md",
 	"CLAUDE.md",
 	".cursorrules",
 	"Makefile",
+}
+
+// pathRemaps maps source path prefixes to destination prefixes.
+// Files under these source prefixes are written to the remapped destination
+// in target repos, keeping framework files hidden under .teamwork/.
+var pathRemaps = map[string]string{
+	"agents/": ".teamwork/agents/",
+	"docs/":   ".teamwork/docs/",
 }
 
 // StarterTemplates maps relative path to content for files created once on install.
@@ -72,14 +88,15 @@ func Install(dir, owner, repo, ref string) error {
 
 	written := 0
 	for _, f := range files {
-		dst := filepath.Join(dir, f.Path)
+		destPath := remapPath(f.Path)
+		dst := filepath.Join(dir, destPath)
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return fmt.Errorf("creating directory for %s: %w", f.Path, err)
+			return fmt.Errorf("creating directory for %s: %w", destPath, err)
 		}
 		if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-			return fmt.Errorf("writing %s: %w", f.Path, err)
+			return fmt.Errorf("writing %s: %w", destPath, err)
 		}
-		m.Files[f.Path] = sha256hex(f.Data)
+		m.Files[destPath] = sha256hex(f.Data)
 		written++
 	}
 
@@ -104,14 +121,12 @@ func Install(dir, owner, repo, ref string) error {
 		starterCreated++
 	}
 
-	// Initialize .teamwork/ if it doesn't exist (mirrors init command logic).
+	// Initialize .teamwork/ subdirectories.
 	teamworkDir := filepath.Join(dir, ".teamwork")
-	if _, err := os.Stat(teamworkDir); err != nil {
-		subdirs := []string{"state", "handoffs", "memory", "metrics"}
-		for _, sub := range subdirs {
-			if err := os.MkdirAll(filepath.Join(teamworkDir, sub), 0o755); err != nil {
-				return fmt.Errorf("creating .teamwork/%s: %w", sub, err)
-			}
+	subdirs := []string{"state", "handoffs", "memory", "metrics"}
+	for _, sub := range subdirs {
+		if err := os.MkdirAll(filepath.Join(teamworkDir, sub), 0o755); err != nil {
+			return fmt.Errorf("creating .teamwork/%s: %w", sub, err)
 		}
 	}
 
@@ -158,25 +173,26 @@ func Update(dir, owner, repo, ref string, force bool) error {
 	var skippedPaths []string
 
 	for _, f := range files {
+		destPath := remapPath(f.Path)
 		newHash := sha256hex(f.Data)
-		newManifest.Files[f.Path] = newHash
-		dst := filepath.Join(dir, f.Path)
+		newManifest.Files[destPath] = newHash
+		dst := filepath.Join(dir, destPath)
 
 		existing, err := os.ReadFile(dst)
 		if err != nil {
 			// File doesn't exist locally — write it.
 			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-				return fmt.Errorf("creating directory for %s: %w", f.Path, err)
+				return fmt.Errorf("creating directory for %s: %w", destPath, err)
 			}
 			if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-				return fmt.Errorf("writing %s: %w", f.Path, err)
+				return fmt.Errorf("writing %s: %w", destPath, err)
 			}
 			updated++
 			continue
 		}
 
 		currentHash := sha256hex(existing)
-		manifestHash := oldManifest.Files[f.Path]
+		manifestHash := oldManifest.Files[destPath]
 
 		if currentHash == newHash {
 			// Already matches new version.
@@ -187,7 +203,7 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		if currentHash == manifestHash || manifestHash == "" {
 			// User hasn't modified it (or untracked) — overwrite.
 			if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-				return fmt.Errorf("writing %s: %w", f.Path, err)
+				return fmt.Errorf("writing %s: %w", destPath, err)
 			}
 			updated++
 			continue
@@ -196,14 +212,14 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		// User modified the file.
 		if force {
 			if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-				return fmt.Errorf("writing %s: %w", f.Path, err)
+				return fmt.Errorf("writing %s: %w", destPath, err)
 			}
 			updated++
 			continue
 		}
 
 		skipped++
-		skippedPaths = append(skippedPaths, f.Path)
+		skippedPaths = append(skippedPaths, destPath)
 	}
 
 	if err := writeManifest(dir, newManifest); err != nil {
@@ -336,6 +352,17 @@ func isFrameworkFile(path string) bool {
 		}
 	}
 	return false
+}
+
+// remapPath applies path remapping for target repo layout.
+// Source paths like "agents/roles/coder.md" become ".teamwork/agents/roles/coder.md".
+func remapPath(path string) string {
+	for src, dst := range pathRemaps {
+		if strings.HasPrefix(path, src) {
+			return dst + strings.TrimPrefix(path, src)
+		}
+	}
+	return path
 }
 
 func readManifest(dir string) (*Manifest, error) {

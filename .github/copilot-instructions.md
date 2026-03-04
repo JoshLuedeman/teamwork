@@ -6,7 +6,7 @@ Teamwork is an agent-native development template that structures AI-human collab
 
 0. **Read project context.** Start every session by reading `MEMORY.md` for current project state, recent decisions, and active context.
 
-1. **Identify your role.** Determine which role you are performing and read the corresponding file in `agents/roles/`:
+1. **Identify your role.** Determine which role you are performing and read the corresponding file in `.teamwork/agents/roles/`:
    - `planner.md` — Break goals into tasks. Never write code.
    - `architect.md` — Design systems, write ADRs. Never write code.
    - `coder.md` — Implement tasks, write tests, open PRs.
@@ -16,11 +16,11 @@ Teamwork is an agent-native development template that structures AI-human collab
    - `documenter.md` — Keep documentation accurate and current.
    - `orchestrator.md` — Coordinate workflows, dispatch roles. Never write code.
 
-   **If no role is specified:** Use `docs/role-selector.md` to determine the right role from the task. Quick defaults: implementation tasks → Coder, planning/scoping → Planner, code review → Reviewer, multi-role tasks → Planner (break it down first).
-2. **Read the conventions.** Review `docs/conventions.md` for coding standards, branch naming, commit format, and PR requirements.
-3. **Understand the architecture.** Check `docs/architecture.md` for prior design decisions (ADRs) before proposing structural changes.
-4. **Learn the vocabulary.** Use terminology as defined in `docs/glossary.md`.
-5. **Check for workflows.** For multi-step tasks, see `agents/workflows/` for step-by-step guides (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release).
+   **If no role is specified:** Use `.teamwork/docs/role-selector.md` to determine the right role from the task. Quick defaults: implementation tasks → Coder, planning/scoping → Planner, code review → Reviewer, multi-role tasks → Planner (break it down first).
+2. **Read the conventions.** Review `.teamwork/docs/conventions.md` for coding standards, branch naming, commit format, and PR requirements.
+3. **Understand the architecture.** Check `.teamwork/docs/architecture.md` for prior design decisions (ADRs) before proposing structural changes.
+4. **Learn the vocabulary.** Use terminology as defined in `.teamwork/docs/glossary.md`.
+5. **Check for workflows.** For multi-step tasks, see `.teamwork/agents/workflows/` for step-by-step guides (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release).
 
 ## Key Rules
 
@@ -29,7 +29,7 @@ Teamwork is an agent-native development template that structures AI-human collab
 - **Conventional commits.** Use the format: `type(scope): description` (e.g., `feat(auth): add token refresh`).
 - **One task per PR.** Keep pull requests focused on a single task or change.
 - **Follow role boundaries.** If your role says "never write code" or "never modify code," respect that constraint.
-- **Check for workflow files.** If a multi-step workflow applies (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release), check `agents/workflows/` for step-by-step guidance.
+- **Check for workflow files.** If a multi-step workflow applies (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release), check `.teamwork/agents/workflows/` for step-by-step guidance.
 
 ## When to Escalate
 
@@ -45,16 +45,20 @@ Stop and ask the human when:
 
 ```
 MEMORY.md             — Project context (read at session start)
-agents/roles/         — Role definitions (read yours before starting)
-agents/workflows/     — Multi-step workflow guides
-.teamwork/            — Orchestration state (handoffs, memory, metrics)
-docs/conventions.md   — Coding standards and project conventions
-docs/architecture.md  — Architecture decisions (ADRs)
-docs/protocols.md     — Coordination protocol specification
-docs/glossary.md      — Project terminology
-docs/conflict-resolution.md — Resolving conflicting instructions
-docs/secrets-policy.md — Rules for handling secrets and credentials
-docs/cost-policy.md   — Guidelines for managing AI agent costs
+.teamwork/
+  agents/roles/       — Role definitions (read yours before starting)
+  agents/workflows/   — Multi-step workflow guides
+  docs/conventions.md — Coding standards and project conventions
+  docs/architecture.md — Architecture decisions (ADRs)
+  docs/protocols.md   — Coordination protocol specification
+  docs/glossary.md    — Project terminology
+  docs/conflict-resolution.md — Resolving conflicting instructions
+  docs/secrets-policy.md — Rules for handling secrets and credentials
+  docs/cost-policy.md — Guidelines for managing AI agent costs
+  state/              — Workflow state files
+  handoffs/           — Handoff artifacts between roles
+  memory/             — Structured project memory
+  metrics/            — Agent activity logs (gitignored)
 ```
 
 ## Model Selection
@@ -65,7 +69,7 @@ After identifying your role, check its **Model Requirements** section for the re
 - **If the role needs a lower tier than your current model:** Proceed normally. Being overpowered is fine — just less cost-efficient.
 - **If you can spawn sub-agents:** Use the tier system to run each role at the right model level. Act as a router on a standard model and dispatch premium or fast sub-agents as needed.
 
-See `docs/role-selector.md` for the full tier-to-role mapping table.
+See `.teamwork/docs/role-selector.md` for the full tier-to-role mapping table.
 
 ## Protocol Integration
 
@@ -82,7 +86,7 @@ When working in a workflow, integrate with the `.teamwork/` protocol system:
 - Reference the handoff from the previous step — it contains the context, decisions, and artifacts you need.
 
 ### At Session End
-1. Write a handoff artifact to `.teamwork/handoffs/<workflow-id>/<step>-<role>.md` following the format in `docs/protocols.md`.
+1. Write a handoff artifact to `.teamwork/handoffs/<workflow-id>/<step>-<role>.md` following the format in `.teamwork/docs/protocols.md`.
 2. Update the workflow state file in `.teamwork/state/<workflow-id>.yaml` — record your step as completed and set the next step/role.
 3. If you learned something broadly applicable, add it to the relevant file in `.teamwork/memory/` (patterns, antipatterns, decisions, or feedback).
 

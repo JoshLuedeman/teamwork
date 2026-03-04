@@ -36,7 +36,7 @@ A human decides the codebase is ready for a new release. This may be driven by:
 
 Each step must produce specific artifacts before the next step can begin.
 
-The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `.teamwork/docs/protocols.md`.
 
 **Human → Planner**
 - Release request with:

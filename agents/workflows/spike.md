@@ -36,7 +36,7 @@ alone and requires hands-on investigation:
 
 Each step must produce specific artifacts before the next step can begin.
 
-The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `.teamwork/docs/protocols.md`.
 
 **Human → Planner**
 - Investigation request with:
@@ -79,7 +79,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 ## Notes
 
 - **Output is a document, not code**: The deliverable of a spike is a decision document —
-  typically an ADR filed in `docs/decisions/`. Any proof-of-concept code is throwaway and
+  typically an ADR filed in `.teamwork/docs/decisions/`. Any proof-of-concept code is throwaway and
   must not be merged to production branches. If the spike validates an approach, the actual
   implementation starts fresh through the Feature or Refactoring workflow.
 - **Time-box is mandatory**: Every spike must have a time box defined upfront. Spikes without

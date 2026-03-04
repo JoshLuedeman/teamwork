@@ -266,6 +266,11 @@ func fetchTarball(owner, repo, ref string) ([]File, string, error) {
 			return nil, "", fmt.Errorf("tar: %w", err)
 		}
 
+		// Skip PAX global/extended headers — they precede the real entries.
+		if hdr.Typeflag == tar.TypeXGlobalHeader || hdr.Typeflag == tar.TypeXHeader {
+			continue
+		}
+
 		// Determine the top-level prefix from the first entry.
 		if prefix == "" {
 			parts := strings.SplitN(hdr.Name, "/", 2)

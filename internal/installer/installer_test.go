@@ -246,6 +246,10 @@ func decodeTarball(data []byte) ([]File, string, error) {
 		if err != nil {
 			break // io.EOF or other terminal error
 		}
+		// Skip PAX global/extended headers.
+		if hdr.Typeflag == tar.TypeXGlobalHeader || hdr.Typeflag == tar.TypeXHeader {
+			continue
+		}
 		if prefix == "" {
 			parts := splitN(hdr.Name, "/", 2)
 			if len(parts) > 0 {
@@ -401,6 +405,63 @@ func TestTarballParsing_FileContentPreserved(t *testing.T) {
 	}
 	if string(files[0].Data) != content {
 		t.Errorf("file content = %q, want %q", files[0].Data, content)
+	}
+}
+
+// makeTarballWithPAXHeaders builds a tarball with a leading pax_global_header,
+// which GitHub includes in tarballs. This verifies the parser skips PAX entries.
+func makeTarballWithPAXHeaders(prefix string, files map[string]string) []byte {
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gw)
+
+	// Write PAX global header (as GitHub does).
+	_ = tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeXGlobalHeader,
+		Name:     "pax_global_header",
+		Size:     0,
+	})
+
+	// Directory entry for the real prefix.
+	_ = tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeDir,
+		Name:     prefix,
+		Mode:     0o755,
+	})
+
+	for name, content := range files {
+		data := []byte(content)
+		_ = tw.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     prefix + name,
+			Mode:     0o644,
+			Size:     int64(len(data)),
+		})
+		_, _ = tw.Write(data)
+	}
+	tw.Close()
+	gw.Close()
+	return buf.Bytes()
+}
+
+func TestTarballParsing_PAXGlobalHeader(t *testing.T) {
+	tb := makeTarballWithPAXHeaders(testPrefix, sampleFrameworkContent())
+	files, sha, err := decodeTarball(tb)
+	if err != nil {
+		t.Fatalf("decodeTarball: %v", err)
+	}
+	if sha != "abc1234abc1234" {
+		t.Errorf("commitSHA = %q, want abc1234abc1234", sha)
+	}
+	if len(files) == 0 {
+		t.Fatal("expected at least one framework file")
+	}
+	paths := make(map[string]bool, len(files))
+	for _, f := range files {
+		paths[f.Path] = true
+	}
+	if !paths["agents/roles/coder.md"] {
+		t.Error("expected agents/roles/coder.md to be extracted")
 	}
 }
 

@@ -31,7 +31,7 @@ commit or PR that needs to be reverted and the reason for the rollback.
 
 Each step must produce specific artifacts before the next step can begin.
 
-The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `.teamwork/docs/protocols.md`.
 
 **Human/Tester → Human**
 - Identification of the bad merge: commit SHA or PR number

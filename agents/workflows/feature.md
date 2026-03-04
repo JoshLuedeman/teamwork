@@ -33,7 +33,7 @@ a clear goal statement and any known constraints or requirements.
 
 Each step must produce specific artifacts before the next step can begin.
 
-The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `docs/protocols.md`.
+The orchestrator validates each handoff artifact before dispatching the next role. Handoffs are stored in `.teamwork/handoffs/<workflow-id>/` following the format in `.teamwork/docs/protocols.md`.
 
 **Human → Planner**
 - Feature request with goal statement, context, and constraints (issue or structured description)
@@ -45,7 +45,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 **Architect → Coder**
 - Feasibility assessment per task (comments on task issues)
 - Design decisions and conventions to follow
-- ADR file in `docs/decisions/` (if the feature introduces new patterns)
+- ADR file in `.teamwork/docs/decisions/` (if the feature introduces new patterns)
 
 **Coder → Tester**
 - Open PR with implementation and initial tests

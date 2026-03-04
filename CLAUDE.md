@@ -6,7 +6,7 @@ Teamwork is an agent-native development template that structures AI-human collab
 
 0. **Read project context.** Start every session by reading `MEMORY.md` for current project state, recent decisions, and active context.
 
-1. **Identify your role.** Determine which role you are performing and read the matching file in `agents/roles/`:
+1. **Identify your role.** Determine which role you are performing and read the matching file in `.teamwork/agents/roles/`:
    - `planner.md` — Break goals into tasks. Never write code.
    - `architect.md` — Design systems, write ADRs. Never write code.
    - `coder.md` — Implement tasks, write tests, open PRs.
@@ -16,17 +16,17 @@ Teamwork is an agent-native development template that structures AI-human collab
    - `documenter.md` — Keep documentation accurate and current.
    - `orchestrator.md` — Coordinate workflows, dispatch roles. Never write code.
 
-   **If no role is specified:** Use `docs/role-selector.md` to determine the right role from the task. Quick defaults: implementation tasks → Coder, planning/scoping → Planner, code review → Reviewer, multi-role tasks → Planner (break it down first).
+   **If no role is specified:** Use `.teamwork/docs/role-selector.md` to determine the right role from the task. Quick defaults: implementation tasks → Coder, planning/scoping → Planner, code review → Reviewer, multi-role tasks → Planner (break it down first).
 
-2. **Read the conventions.** `docs/conventions.md` defines coding standards, branch naming (`feature/`, `bugfix/`, `refactor/`), conventional commit format, PR requirements, file naming, and directory structure.
+2. **Read the conventions.** `.teamwork/docs/conventions.md` defines coding standards, branch naming (`feature/`, `bugfix/`, `refactor/`), conventional commit format, PR requirements, file naming, and directory structure.
 
-3. **Check architecture decisions.** `docs/architecture.md` contains ADRs documenting prior design decisions and their rationale. Read relevant ADRs before proposing structural changes.
+3. **Check architecture decisions.** `.teamwork/docs/architecture.md` contains ADRs documenting prior design decisions and their rationale. Read relevant ADRs before proposing structural changes.
 
-4. **Use correct terminology.** `docs/glossary.md` defines project terms (role, workflow, handoff, escalation, etc.). Use these terms consistently.
+4. **Use correct terminology.** `.teamwork/docs/glossary.md` defines project terms (role, workflow, handoff, escalation, etc.). Use these terms consistently.
 
 ## Workflows
 
-For multi-step tasks, check `agents/workflows/` for structured guides:
+For multi-step tasks, check `.teamwork/agents/workflows/` for structured guides:
 - `feature.md` — Adding new functionality
 - `bugfix.md` — Diagnosing and fixing bugs
 - `refactor.md` — Restructuring existing code
@@ -66,23 +66,23 @@ Stop and ask the human when:
 
 ```
 MEMORY.md               — Project context (read at session start)
-agents/
-  roles/              — Role definitions (8 core — read yours first)
-  workflows/          — Step-by-step workflow guides
 .teamwork/
+  agents/
+    roles/              — Role definitions (8 core — read yours first)
+    workflows/          — Step-by-step workflow guides
+  docs/
+    conventions.md      — Coding standards and project conventions
+    architecture.md     — Architecture Decision Records (ADRs)
+    protocols.md        — Coordination protocol specification
+    glossary.md         — Terminology definitions
+    conflict-resolution.md — How to resolve conflicting instructions
+    secrets-policy.md   — Rules for handling secrets and credentials
+    cost-policy.md      — Guidelines for managing AI agent costs
   config.yaml         — Orchestration settings
   state/              — Workflow state files (one per active workflow)
   handoffs/           — Handoff artifacts between roles
   memory/             — Structured project memory
   metrics/            — Agent activity logs (gitignored)
-docs/
-  conventions.md      — Coding standards and project conventions
-  architecture.md     — Architecture Decision Records (ADRs)
-  protocols.md        — Coordination protocol specification
-  glossary.md         — Terminology definitions
-  conflict-resolution.md — How to resolve conflicting instructions
-  secrets-policy.md   — Rules for handling secrets and credentials
-  cost-policy.md      — Guidelines for managing AI agent costs
 ```
 
 ## Model Selection
@@ -93,7 +93,7 @@ After identifying your role, check its **Model Requirements** section for the re
 - **If the role needs a lower tier than your current model:** Proceed normally. Being overpowered is fine — just less cost-efficient.
 - **If you can spawn sub-agents:** Use the tier system to run each role at the right model level. Act as a router on a standard model and dispatch premium or fast sub-agents as needed.
 
-See `docs/role-selector.md` for the full tier-to-role mapping table.
+See `.teamwork/docs/role-selector.md` for the full tier-to-role mapping table.
 
 ## Protocol Integration
 
@@ -106,7 +106,7 @@ When working in a workflow, integrate with the `.teamwork/` protocol system:
 4. Check `.teamwork/memory/` for patterns and decisions relevant to your domain.
 
 ### At Session End
-1. Write a handoff artifact to `.teamwork/handoffs/<workflow-id>/<step>-<role>.md` per `docs/protocols.md`.
+1. Write a handoff artifact to `.teamwork/handoffs/<workflow-id>/<step>-<role>.md` per `.teamwork/docs/protocols.md`.
 2. Update the workflow state file in `.teamwork/state/<workflow-id>.yaml` — record your step as completed.
 3. If you learned something broadly applicable, add it to `.teamwork/memory/`.
 

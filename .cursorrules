@@ -5,16 +5,16 @@ Teamwork is an agent-native development template for AI-human collaboration usin
 ## Setup
 
 - Read `MEMORY.md` at session start for current project context.
-- Identify your role and read the corresponding file in `agents/roles/` (planner, architect, coder, tester, reviewer, security-auditor, documenter, orchestrator).
-- **If no role is specified:** Use `docs/role-selector.md`. Quick defaults: implementation → Coder, planning → Planner, review → Reviewer, multi-role → Planner.
-- Read `docs/conventions.md` for coding standards, commit format, and PR rules.
-- Check `docs/architecture.md` for prior design decisions (ADRs).
-- Use terminology from `docs/glossary.md`.
-- For multi-step tasks, follow the relevant workflow in `agents/workflows/`.
+- Identify your role and read the corresponding file in `.teamwork/agents/roles/` (planner, architect, coder, tester, reviewer, security-auditor, documenter, orchestrator).
+- **If no role is specified:** Use `.teamwork/docs/role-selector.md`. Quick defaults: implementation → Coder, planning → Planner, review → Reviewer, multi-role → Planner.
+- Read `.teamwork/docs/conventions.md` for coding standards, commit format, and PR rules.
+- Check `.teamwork/docs/architecture.md` for prior design decisions (ADRs).
+- Use terminology from `.teamwork/docs/glossary.md`.
+- For multi-step tasks, follow the relevant workflow in `.teamwork/agents/workflows/`.
 
 ## Rules
 
-1. Read your role file in `agents/roles/` before starting any work.
+1. Read your role file in `.teamwork/agents/roles/` before starting any work.
 2. Make minimal changes — only modify what the task requires.
 3. Do not refactor unrelated code or fix unrelated issues.
 4. Run all tests before and after making changes.
@@ -23,7 +23,7 @@ Teamwork is an agent-native development template for AI-human collaboration usin
 7. One task per PR. Keep PRs focused and small (~300 lines, ~10 files max).
 8. Respect role boundaries — if your role says "never write code," don't.
 9. Update documentation when changes affect behavior or APIs.
-10. Check ADRs in `docs/architecture.md` before proposing structural changes.
+10. Check ADRs in `.teamwork/docs/architecture.md` before proposing structural changes.
 
 ## Escalation
 
@@ -39,16 +39,21 @@ Stop and ask the human when:
 
 ```
 MEMORY.md           — Project context (read at session start)
-agents/roles/       — Role definitions (read yours first)
-agents/workflows/   — Workflow guides (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release, rollback)
-.teamwork/          — Orchestration state (config, state, handoffs, memory, metrics)
-docs/conventions.md — Coding standards
-docs/architecture.md — Architecture decisions
-docs/protocols.md   — Coordination protocol specification
-docs/glossary.md    — Terminology
-docs/conflict-resolution.md — Resolving conflicting instructions
-docs/secrets-policy.md — Secrets and credentials policy
-docs/cost-policy.md — AI agent cost guidelines
+.teamwork/
+  agents/roles/     — Role definitions (read yours first)
+  agents/workflows/ — Workflow guides (feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release, rollback)
+  docs/conventions.md — Coding standards
+  docs/architecture.md — Architecture decisions
+  docs/protocols.md — Coordination protocol specification
+  docs/glossary.md  — Terminology
+  docs/conflict-resolution.md — Resolving conflicting instructions
+  docs/secrets-policy.md — Secrets and credentials policy
+  docs/cost-policy.md — AI agent cost guidelines
+  config.yaml       — Orchestration settings
+  state/            — Workflow state files
+  handoffs/         — Handoff artifacts between roles
+  memory/           — Structured project memory
+  metrics/          — Agent activity logs (gitignored)
 ```
 
 ## Model Selection
@@ -59,7 +64,7 @@ After identifying your role, check its **Model Requirements** section for the re
 - **Lower tier needed:** Proceed normally.
 - **Sub-agents available:** Route each role to the right model tier. Act as a router and dispatch sub-agents as needed.
 
-See `docs/role-selector.md` for tier-to-role mapping.
+See `.teamwork/docs/role-selector.md` for tier-to-role mapping.
 
 ## Protocol Integration
 
@@ -67,5 +72,5 @@ When working in a tracked workflow:
 1. **Start:** Check `.teamwork/state/` for your workflow. Read the previous handoff from `.teamwork/handoffs/<workflow-id>/`.
 2. **End:** Write your handoff artifact to `.teamwork/handoffs/<workflow-id>/<step>-<role>.md`. Update the state file.
 3. **Memory:** Check `.teamwork/memory/` for relevant patterns. Add new learnings when applicable.
-4. **Format:** Follow `docs/protocols.md` for all file formats.
+4. **Format:** Follow `.teamwork/docs/protocols.md` for all file formats.
 5. **Ad-hoc tasks:** Skip protocol integration if not part of a tracked workflow.

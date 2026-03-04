@@ -121,10 +121,48 @@ func TestIsFrameworkFile_Excluded(t *testing.T) {
 		"CHANGELOG.md",
 		"README.md",
 		".github/workflows/ci.yaml",
+		"docs/cli.md",
+		"docs/state-machines.md",
+		"docs/onboarding.md",
+		"docs/decisions/001-role-based-agent-framework.md",
+		"docs/decisions/README.md",
 	}
 	for _, c := range cases {
 		if isFrameworkFile(c) {
 			t.Errorf("expected %q to NOT be a framework file", c)
+		}
+	}
+}
+
+// -- remapPath --
+
+func TestRemapPath_AgentsRemapped(t *testing.T) {
+	cases := map[string]string{
+		"agents/roles/coder.md":        ".teamwork/agents/roles/coder.md",
+		"agents/workflows/feature.md":  ".teamwork/agents/workflows/feature.md",
+		"agents/README.md":             ".teamwork/agents/README.md",
+		"docs/conventions.md":          ".teamwork/docs/conventions.md",
+		"docs/glossary.md":             ".teamwork/docs/glossary.md",
+	}
+	for input, want := range cases {
+		got := remapPath(input)
+		if got != want {
+			t.Errorf("remapPath(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestRemapPath_RootFilesUnchanged(t *testing.T) {
+	cases := []string{
+		"CLAUDE.md",
+		".cursorrules",
+		"Makefile",
+		".github/copilot-instructions.md",
+	}
+	for _, input := range cases {
+		got := remapPath(input)
+		if got != input {
+			t.Errorf("remapPath(%q) = %q, want unchanged", input, got)
 		}
 	}
 }
@@ -161,8 +199,8 @@ func TestWriteReadManifest(t *testing.T) {
 	m := &Manifest{
 		Version: "sha123",
 		Files: map[string]string{
-			"agents/roles/coder.md": "deadbeef",
-			"CLAUDE.md":             "cafebabe",
+			".teamwork/agents/roles/coder.md": "deadbeef",
+			"CLAUDE.md":                       "cafebabe",
 		},
 	}
 	if err := writeManifest(dir, m); err != nil {
@@ -530,8 +568,8 @@ func TestInstall_CleanDir_FrameworkFilesWritten(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"agents/roles/coder.md",
-		"docs/conventions.md",
+		".teamwork/agents/roles/coder.md",
+		".teamwork/docs/conventions.md",
 		"CLAUDE.md",
 		".cursorrules",
 		"Makefile",
@@ -732,14 +770,14 @@ func TestUpdate_NewUpstreamFile_Written(t *testing.T) {
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	tb2 := makeTarball(newPrefix, map[string]string{
-		"CLAUDE.md":           "original\n",
-		"docs/new-feature.md": "brand new file\n",
+		"CLAUDE.md":            "original\n",
+		"agents/roles/new.md":  "brand new file\n",
 	})
 	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "docs/new-feature.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, ".teamwork/agents/roles/new.md")); err != nil {
 		t.Errorf("new upstream file not written: %v", err)
 	}
 }
@@ -851,8 +889,8 @@ func TestManifest_JSONRoundTrip(t *testing.T) {
 	m := &Manifest{
 		Version: "sha123abc",
 		Files: map[string]string{
-			"CLAUDE.md":           sha256hex([]byte("content")),
-			"agents/roles/coder.md": sha256hex([]byte("coder")),
+			"CLAUDE.md":                        sha256hex([]byte("content")),
+			".teamwork/agents/roles/coder.md":  sha256hex([]byte("coder")),
 		},
 	}
 	data, err := json.MarshalIndent(m, "", "  ")

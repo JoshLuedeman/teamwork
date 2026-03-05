@@ -67,6 +67,14 @@ mcp_servers:
     args: ["@playwright/mcp@latest"]
     env: {}
     required: false
+
+  terraform:
+    description: "Terraform Registry lookups, provider docs, module search, and HCP Terraform workspace management"
+    command: "npx"
+    args: ["-y", "terraform-mcp-server@latest"]
+    env:
+      TF_TOKEN: "${TF_TOKEN}"
+    required: false
 ```
 
 **Field definitions:**
@@ -119,16 +127,17 @@ Role files do not contain server launch configuration (that lives in `config.yam
 
 **Role-to-server mapping:**
 
-| Role | github | semgrep | context7 | playwright |
-|---|---|---|---|---|
-| Planner | recommended | — | optional | — |
-| Architect | recommended | — | optional | — |
-| Coder | recommended | — | recommended | optional |
-| Tester | recommended | — | optional | recommended |
-| Reviewer | recommended | optional | — | — |
-| Security Auditor | recommended | recommended | — | — |
-| Documenter | recommended | — | recommended | — |
-| Orchestrator | recommended | — | — | — |
+| Role | github | semgrep | context7 | playwright | terraform |
+|---|---|---|---|---|---|
+| Planner | recommended | — | optional | — | — |
+| Architect | recommended | — | optional | — | optional |
+| Coder | recommended | — | recommended | optional | optional |
+| Tester | recommended | — | optional | recommended | — |
+| Reviewer | recommended | optional | — | — | — |
+| Security Auditor | recommended | recommended | — | — | — |
+| Documenter | recommended | — | recommended | — | — |
+| Orchestrator | recommended | — | — | — | — |
+| DevOps | recommended | — | — | — | recommended |
 
 ### 3. Instruction File Surfacing
 
@@ -319,6 +328,20 @@ Provides: current, version-specific documentation for libraries and frameworks. 
 | Roles | Tester (recommended), Coder (optional) |
 
 Provides: browser automation via accessibility tree snapshots, page navigation, element interaction, screenshot capture. Enables AI-driven E2E test authoring and debugging. Primary tool for the Tester role when working on web applications.
+
+**Terraform MCP Server** — `hashicorp/terraform-mcp-server`
+
+| Field | Value |
+|---|---|
+| Repository | https://github.com/hashicorp/terraform-mcp-server |
+| Maintainer | HashiCorp (official) |
+| Runtime | Node.js 18+ or Docker |
+| Install | `npx -y terraform-mcp-server@latest` |
+| Docker | `docker run -i --rm hashicorp/terraform-mcp-server` |
+| Auth | `TF_TOKEN` (optional, required for HCP Terraform/Enterprise features and private registry) |
+| Roles | DevOps (recommended), Architect (optional), Coder (optional) |
+
+Provides: Terraform Registry lookups (providers, modules, Sentinel policies), provider capability discovery, module version details, and HCP Terraform workspace management (list orgs/projects/workspaces, manage variables and tags, run management). Enables agents to generate accurate, up-to-date Terraform configurations using real provider schemas rather than potentially outdated training data. Primary tool for the DevOps role when working with infrastructure-as-code. Architects benefit from provider and module discovery during design. Coders benefit when writing or modifying Terraform configurations.
 
 ### 7. What the Coder Needs to Implement
 

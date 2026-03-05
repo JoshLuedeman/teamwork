@@ -55,12 +55,16 @@ func newTestServer(tb []byte) *httptest.Server {
 // sampleFiles returns a set of framework and non-framework files for test tarballs.
 func sampleFrameworkContent() map[string]string {
 	return map[string]string{
-		"agents/roles/coder.md": "# Coder role\n",
-		"docs/conventions.md":   "# Conventions\n",
-		"CLAUDE.md":             "# Claude instructions\n",
-		".cursorrules":          "rules here\n",
-		"Makefile":              "all:\n\techo ok\n",
-		".github/copilot-instructions.md": "instructions\n",
+		".github/agents/roles/coder.md":    "# Coder role\n",
+		".github/skills/skill.md":          "# Skill\n",
+		".github/instructions/inst.md":     "# Instructions\n",
+		".github/copilot-instructions.md":  "instructions\n",
+		".github/ISSUE_TEMPLATE/bug.md":    "# Bug\n",
+		".github/PULL_REQUEST_TEMPLATE.md": "# PR template\n",
+		"docs/conventions.md":              "# Conventions\n",
+		".editorconfig":                    "root = true\n",
+		".pre-commit-config.yaml":          "repos: []\n",
+		"Makefile":                         "all:\n\techo ok\n",
 		// Non-framework files — should be skipped:
 		"go.mod":              "module example\n",
 		"cmd/main.go":         "package main\n",
@@ -94,14 +98,17 @@ func TestSHA256Hex_Empty(t *testing.T) {
 
 func TestIsFrameworkFile_Included(t *testing.T) {
 	cases := []string{
-		"agents/roles/coder.md",
-		"agents/workflows/feature.md",
+		".github/agents/roles/coder.md",
+		".github/skills/skill.md",
+		".github/instructions/inst.md",
+		".github/copilot-instructions.md",
+		".github/ISSUE_TEMPLATE/bug.md",
+		".github/PULL_REQUEST_TEMPLATE.md",
 		"docs/conventions.md",
 		"docs/glossary.md",
-		"CLAUDE.md",
-		".cursorrules",
+		".editorconfig",
+		".pre-commit-config.yaml",
 		"Makefile",
-		".github/copilot-instructions.md",
 	}
 	for _, c := range cases {
 		if !isFrameworkFile(c) {
@@ -120,49 +127,14 @@ func TestIsFrameworkFile_Excluded(t *testing.T) {
 		"MEMORY.md",
 		"CHANGELOG.md",
 		"README.md",
+		"CLAUDE.md",
+		".cursorrules",
+		"agents/roles/coder.md",
 		".github/workflows/ci.yaml",
-		"docs/cli.md",
-		"docs/state-machines.md",
-		"docs/onboarding.md",
-		"docs/decisions/001-role-based-agent-framework.md",
-		"docs/decisions/README.md",
 	}
 	for _, c := range cases {
 		if isFrameworkFile(c) {
 			t.Errorf("expected %q to NOT be a framework file", c)
-		}
-	}
-}
-
-// -- remapPath --
-
-func TestRemapPath_AgentsRemapped(t *testing.T) {
-	cases := map[string]string{
-		"agents/roles/coder.md":        ".teamwork/agents/roles/coder.md",
-		"agents/workflows/feature.md":  ".teamwork/agents/workflows/feature.md",
-		"agents/README.md":             ".teamwork/agents/README.md",
-		"docs/conventions.md":          ".teamwork/docs/conventions.md",
-		"docs/glossary.md":             ".teamwork/docs/glossary.md",
-	}
-	for input, want := range cases {
-		got := remapPath(input)
-		if got != want {
-			t.Errorf("remapPath(%q) = %q, want %q", input, got, want)
-		}
-	}
-}
-
-func TestRemapPath_RootFilesUnchanged(t *testing.T) {
-	cases := []string{
-		"CLAUDE.md",
-		".cursorrules",
-		"Makefile",
-		".github/copilot-instructions.md",
-	}
-	for _, input := range cases {
-		got := remapPath(input)
-		if got != input {
-			t.Errorf("remapPath(%q) = %q, want unchanged", input, got)
 		}
 	}
 }
@@ -199,8 +171,8 @@ func TestWriteReadManifest(t *testing.T) {
 	m := &Manifest{
 		Version: "sha123",
 		Files: map[string]string{
-			".teamwork/agents/roles/coder.md": "deadbeef",
-			"CLAUDE.md":                       "cafebabe",
+			".github/agents/roles/coder.md": "deadbeef",
+			".editorconfig":                 "cafebabe",
 		},
 	}
 	if err := writeManifest(dir, m); err != nil {
@@ -232,7 +204,7 @@ func TestReadManifest_MissingFile(t *testing.T) {
 
 func TestReadManifest_ValidJSON(t *testing.T) {
 	dir := t.TempDir()
-	content := `{"version":"v1","files":{"CLAUDE.md":"aabbcc"}}`
+	content := `{"version":"v1","files":{".editorconfig":"aabbcc"}}`
 	p := filepath.Join(dir, manifestPath)
 	_ = os.MkdirAll(filepath.Dir(p), 0o755)
 	_ = os.WriteFile(p, []byte(content), 0o644)
@@ -244,8 +216,8 @@ func TestReadManifest_ValidJSON(t *testing.T) {
 	if m.Version != "v1" {
 		t.Errorf("Version = %q, want v1", m.Version)
 	}
-	if m.Files["CLAUDE.md"] != "aabbcc" {
-		t.Errorf("Files[CLAUDE.md] = %q, want aabbcc", m.Files["CLAUDE.md"])
+	if m.Files[".editorconfig"] != "aabbcc" {
+		t.Errorf("Files[.editorconfig] = %q, want aabbcc", m.Files[".editorconfig"])
 	}
 }
 
@@ -283,10 +255,6 @@ func decodeTarball(data []byte) ([]File, string, error) {
 		hdr, err := tr.Next()
 		if err != nil {
 			break // io.EOF or other terminal error
-		}
-		// Skip PAX global/extended headers.
-		if hdr.Typeflag == tar.TypeXGlobalHeader || hdr.Typeflag == tar.TypeXHeader {
-			continue
 		}
 		if prefix == "" {
 			parts := splitN(hdr.Name, "/", 2)
@@ -375,10 +343,10 @@ func TestTarballParsing_FrameworkFilesExtracted(t *testing.T) {
 
 	// Should be included:
 	for _, want := range []string{
-		"agents/roles/coder.md",
+		".github/agents/roles/coder.md",
 		"docs/conventions.md",
-		"CLAUDE.md",
-		".cursorrules",
+		".editorconfig",
+		".pre-commit-config.yaml",
 		"Makefile",
 		".github/copilot-instructions.md",
 	} {
@@ -415,7 +383,7 @@ func TestTarballParsing_NonFrameworkFilesSkipped(t *testing.T) {
 
 func TestTarballParsing_PrefixStripped(t *testing.T) {
 	tb := makeTarball(testPrefix, map[string]string{
-		"CLAUDE.md": "content",
+		".editorconfig": "content",
 	})
 	files, _, err := decodeTarball(tb)
 	if err != nil {
@@ -424,15 +392,15 @@ func TestTarballParsing_PrefixStripped(t *testing.T) {
 	if len(files) != 1 {
 		t.Fatalf("expected 1 file, got %d", len(files))
 	}
-	if files[0].Path != "CLAUDE.md" {
-		t.Errorf("path = %q, want CLAUDE.md (prefix should be stripped)", files[0].Path)
+	if files[0].Path != ".editorconfig" {
+		t.Errorf("path = %q, want .editorconfig (prefix should be stripped)", files[0].Path)
 	}
 }
 
 func TestTarballParsing_FileContentPreserved(t *testing.T) {
 	const content = "# Coder role\nSome content here.\n"
 	tb := makeTarball(testPrefix, map[string]string{
-		"CLAUDE.md": content,
+		".editorconfig": content,
 	})
 	files, _, err := decodeTarball(tb)
 	if err != nil {
@@ -443,63 +411,6 @@ func TestTarballParsing_FileContentPreserved(t *testing.T) {
 	}
 	if string(files[0].Data) != content {
 		t.Errorf("file content = %q, want %q", files[0].Data, content)
-	}
-}
-
-// makeTarballWithPAXHeaders builds a tarball with a leading pax_global_header,
-// which GitHub includes in tarballs. This verifies the parser skips PAX entries.
-func makeTarballWithPAXHeaders(prefix string, files map[string]string) []byte {
-	var buf bytes.Buffer
-	gw := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(gw)
-
-	// Write PAX global header (as GitHub does).
-	_ = tw.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeXGlobalHeader,
-		Name:     "pax_global_header",
-		Size:     0,
-	})
-
-	// Directory entry for the real prefix.
-	_ = tw.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeDir,
-		Name:     prefix,
-		Mode:     0o755,
-	})
-
-	for name, content := range files {
-		data := []byte(content)
-		_ = tw.WriteHeader(&tar.Header{
-			Typeflag: tar.TypeReg,
-			Name:     prefix + name,
-			Mode:     0o644,
-			Size:     int64(len(data)),
-		})
-		_, _ = tw.Write(data)
-	}
-	tw.Close()
-	gw.Close()
-	return buf.Bytes()
-}
-
-func TestTarballParsing_PAXGlobalHeader(t *testing.T) {
-	tb := makeTarballWithPAXHeaders(testPrefix, sampleFrameworkContent())
-	files, sha, err := decodeTarball(tb)
-	if err != nil {
-		t.Fatalf("decodeTarball: %v", err)
-	}
-	if sha != "abc1234abc1234" {
-		t.Errorf("commitSHA = %q, want abc1234abc1234", sha)
-	}
-	if len(files) == 0 {
-		t.Fatal("expected at least one framework file")
-	}
-	paths := make(map[string]bool, len(files))
-	for _, f := range files {
-		paths[f.Path] = true
-	}
-	if !paths["agents/roles/coder.md"] {
-		t.Error("expected agents/roles/coder.md to be extracted")
 	}
 }
 
@@ -568,10 +479,10 @@ func TestInstall_CleanDir_FrameworkFilesWritten(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		".teamwork/agents/roles/coder.md",
-		".teamwork/docs/conventions.md",
-		"CLAUDE.md",
-		".cursorrules",
+		".github/agents/roles/coder.md",
+		"docs/conventions.md",
+		".editorconfig",
+		".pre-commit-config.yaml",
 		"Makefile",
 	} {
 		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
@@ -678,7 +589,7 @@ func TestInstall_ExistingStarterFilesNotOverwritten(t *testing.T) {
 func TestUpdate_UnchangedFile_Overwritten(t *testing.T) {
 	dir := t.TempDir()
 	tb1 := makeTarball(testPrefix, map[string]string{
-		"CLAUDE.md": "version 1\n",
+		".editorconfig": "version 1\n",
 	})
 	if err := serveAndInstall(t, dir, tb1); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -687,73 +598,73 @@ func TestUpdate_UnchangedFile_Overwritten(t *testing.T) {
 	// New tarball with a different prefix (different "commit SHA") and updated content.
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	tb2 := makeTarball(newPrefix, map[string]string{
-		"CLAUDE.md": "version 2\n",
+		".editorconfig": "version 2\n",
 	})
 	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
-	got, _ := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	got, _ := os.ReadFile(filepath.Join(dir, ".editorconfig"))
 	if string(got) != "version 2\n" {
-		t.Errorf("CLAUDE.md = %q, want version 2", got)
+		t.Errorf(".editorconfig = %q, want version 2", got)
 	}
 }
 
 func TestUpdate_UserModifiedFile_Skipped(t *testing.T) {
 	dir := t.TempDir()
 	tb1 := makeTarball(testPrefix, map[string]string{
-		"CLAUDE.md": "original\n",
+		".editorconfig": "original\n",
 	})
 	if err := serveAndInstall(t, dir, tb1); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
-	// User modifies CLAUDE.md.
+	// User modifies .editorconfig.
 	userContent := "my custom edits\n"
-	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte(userContent), 0o644); err != nil {
-		t.Fatalf("user modify CLAUDE.md: %v", err)
+	if err := os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte(userContent), 0o644); err != nil {
+		t.Fatalf("user modify .editorconfig: %v", err)
 	}
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	tb2 := makeTarball(newPrefix, map[string]string{
-		"CLAUDE.md": "upstream new\n",
+		".editorconfig": "upstream new\n",
 	})
 	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
 	// File should be preserved (skipped).
-	got, _ := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	got, _ := os.ReadFile(filepath.Join(dir, ".editorconfig"))
 	if string(got) != userContent {
-		t.Errorf("user-modified CLAUDE.md was overwritten; got %q, want %q", got, userContent)
+		t.Errorf("user-modified .editorconfig was overwritten; got %q, want %q", got, userContent)
 	}
 }
 
 func TestUpdate_ForceFlag_OverwritesUserModifiedFile(t *testing.T) {
 	dir := t.TempDir()
 	tb1 := makeTarball(testPrefix, map[string]string{
-		"CLAUDE.md": "original\n",
+		".editorconfig": "original\n",
 	})
 	if err := serveAndInstall(t, dir, tb1); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
-	// User modifies CLAUDE.md.
-	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("my custom edits\n"), 0o644); err != nil {
+	// User modifies .editorconfig.
+	if err := os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte("my custom edits\n"), 0o644); err != nil {
 		t.Fatalf("user modify: %v", err)
 	}
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	upstreamContent := "upstream new\n"
 	tb2 := makeTarball(newPrefix, map[string]string{
-		"CLAUDE.md": upstreamContent,
+		".editorconfig": upstreamContent,
 	})
 	// --force should overwrite.
 	if err := serveAndUpdate(t, dir, tb2, true); err != nil {
 		t.Fatalf("Update --force: %v", err)
 	}
 
-	got, _ := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	got, _ := os.ReadFile(filepath.Join(dir, ".editorconfig"))
 	if string(got) != upstreamContent {
 		t.Errorf("--force update did not overwrite; got %q, want %q", got, upstreamContent)
 	}
@@ -762,7 +673,7 @@ func TestUpdate_ForceFlag_OverwritesUserModifiedFile(t *testing.T) {
 func TestUpdate_NewUpstreamFile_Written(t *testing.T) {
 	dir := t.TempDir()
 	tb1 := makeTarball(testPrefix, map[string]string{
-		"CLAUDE.md": "original\n",
+		".editorconfig": "original\n",
 	})
 	if err := serveAndInstall(t, dir, tb1); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -770,14 +681,14 @@ func TestUpdate_NewUpstreamFile_Written(t *testing.T) {
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	tb2 := makeTarball(newPrefix, map[string]string{
-		"CLAUDE.md":            "original\n",
-		"agents/roles/new.md":  "brand new file\n",
+		".editorconfig":       "original\n",
+		"docs/new-feature.md": "brand new file\n",
 	})
 	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, ".teamwork/agents/roles/new.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "docs/new-feature.md")); err != nil {
 		t.Errorf("new upstream file not written: %v", err)
 	}
 }
@@ -785,14 +696,14 @@ func TestUpdate_NewUpstreamFile_Written(t *testing.T) {
 func TestUpdate_SameVersion_NoOp(t *testing.T) {
 	dir := t.TempDir()
 	tb := makeTarball(testPrefix, map[string]string{
-		"CLAUDE.md": "v1\n",
+		".editorconfig": "v1\n",
 	})
 	if err := serveAndInstall(t, dir, tb); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
-	// Modify CLAUDE.md after install.
-	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("modified\n"), 0o644); err != nil {
+	// Modify .editorconfig after install.
+	if err := os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte("modified\n"), 0o644); err != nil {
 		t.Fatalf("modify: %v", err)
 	}
 
@@ -802,7 +713,7 @@ func TestUpdate_SameVersion_NoOp(t *testing.T) {
 	}
 
 	// File should remain modified since Update short-circuits on same version.
-	got, _ := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	got, _ := os.ReadFile(filepath.Join(dir, ".editorconfig"))
 	if string(got) != "modified\n" {
 		t.Errorf("same-version update changed file; got %q", got)
 	}
@@ -816,26 +727,26 @@ func TestUpdate_MissingManifest_TreatsAsUntracked(t *testing.T) {
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	tb := makeTarball(newPrefix, map[string]string{
-		"CLAUDE.md": "fresh\n",
+		".editorconfig": "fresh\n",
 	})
 	// Should succeed and write the file (no manifest → untracked → overwrite).
 	if err := serveAndUpdate(t, dir, tb, false); err != nil {
 		t.Fatalf("Update with missing manifest: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "CLAUDE.md")); err != nil {
-		t.Errorf("CLAUDE.md should have been written: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, ".editorconfig")); err != nil {
+		t.Errorf(".editorconfig should have been written: %v", err)
 	}
 }
 
 func TestUpdate_VersionAndManifestUpdated(t *testing.T) {
 	dir := t.TempDir()
-	tb1 := makeTarball(testPrefix, map[string]string{"CLAUDE.md": "v1\n"})
+	tb1 := makeTarball(testPrefix, map[string]string{".editorconfig": "v1\n"})
 	if err := serveAndInstall(t, dir, tb1); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
-	tb2 := makeTarball(newPrefix, map[string]string{"CLAUDE.md": "v2\n"})
+	tb2 := makeTarball(newPrefix, map[string]string{".editorconfig": "v2\n"})
 	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
@@ -869,16 +780,16 @@ func TestInstall_Integration(t *testing.T) {
 		t.Errorf("version too short: %q", v)
 	}
 	// Verify at least one framework file was written.
-	if _, err := os.Stat(filepath.Join(dir, "CLAUDE.md")); err != nil {
-		t.Errorf("CLAUDE.md not written: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, ".editorconfig")); err != nil {
+		t.Errorf(".editorconfig not written: %v", err)
 	}
 
 	m, err := readManifest(dir)
 	if err != nil {
 		t.Fatalf("readManifest: %v", err)
 	}
-	if _, ok := m.Files["CLAUDE.md"]; !ok {
-		t.Error("CLAUDE.md not in manifest")
+	if _, ok := m.Files[".editorconfig"]; !ok {
+		t.Error(".editorconfig not in manifest")
 	}
 	t.Logf("Installed version: %s (%d framework files)", v, len(m.Files))
 }
@@ -889,8 +800,8 @@ func TestManifest_JSONRoundTrip(t *testing.T) {
 	m := &Manifest{
 		Version: "sha123abc",
 		Files: map[string]string{
-			"CLAUDE.md":                        sha256hex([]byte("content")),
-			".teamwork/agents/roles/coder.md":  sha256hex([]byte("coder")),
+			".editorconfig":                 sha256hex([]byte("content")),
+			".github/agents/roles/coder.md": sha256hex([]byte("coder")),
 		},
 	}
 	data, err := json.MarshalIndent(m, "", "  ")

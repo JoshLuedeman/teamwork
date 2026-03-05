@@ -12,7 +12,7 @@ Do not remove entries unless they are explicitly obsolete.
 
 ## Patterns That Work
 
-- **Role-model delegation:** Router (Sonnet) reads task → identifies role → spawns sub-agent with correct model tier via `task` tool `model` parameter. Works well.
+- **Agent-model delegation:** Router (Sonnet) reads task → selects Custom Agent from `.github/agents/` → spawns sub-agent with correct model tier via `task` tool `model` parameter. Works well.
 - **httptest.NewServer** for mocking GitHub tarball endpoint in installer tests — lets unit tests cover install/update without network calls.
 
 ## Patterns to Avoid
@@ -29,6 +29,7 @@ they exist.
 - **2025-07-18:** ADR-005 — `teamwork install` and `teamwork update` commands. Tarball fetch (needs GH_TOKEN for private repos), manifest-based conflict detection (SHA-256), framework vs starter file classification. See `docs/decisions/005-install-update-design.md`.
 - **2026-03-03:** `gh-teamwork` CLI extension created at JoshLuedeman/gh-teamwork. Wraps `teamwork install`/`teamwork update` behind `gh teamwork init`/`gh teamwork update`. Falls back to Docker if binary not found.
 - **2026-03-03:** GitHub milestone numbering: #1=Phase 2 Orchestration App (closed), #2=Phase 1 install/update (closed), #3=Phase 2 gh extension (closed), #4=Phase 3 GitHub App, #5=Phase 4 MCP Integration, #6=Backlog, #7=Phase 2.5 CLI Enhancements.
+- **2026-03-05:** Restructured to Copilot-native file system. Roles moved from `agents/roles/` to `.github/agents/*.agent.md` (Custom Agents — selectable from Copilot dropdown). Workflows moved from `agents/workflows/` to `.github/skills/*/SKILL.md` (Skills — invocable via `/skill-name`). Added `.github/instructions/` for path-specific auto-loaded guidelines. Deleted `CLAUDE.md` and `.cursorrules`. Added 3 new agents: lint-agent, api-agent, dba-agent (15 total). Agent files use `<!-- CUSTOMIZE -->` placeholders for project-specific details; `/setup-teamwork` skill fills them in. `teamwork update` now cleans up deprecated files automatically.
 - **2026-03-03:** Phase 2 milestone closed. All 4 planning issues (#1-#4) resolved. Context sharing fully addressed by handoff system. Memory, metrics mostly addressed; follow-up tasks in Phase 2.5 (#66-#78). Multi-repo: hub-spoke design planned with 7 sub-tasks.
 
 ## Common Mistakes

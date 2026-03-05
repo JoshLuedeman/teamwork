@@ -20,28 +20,16 @@ import (
 // FrameworkFiles is the list of path prefixes extracted from the tarball.
 // These are overwritten on update (if unchanged by user).
 var FrameworkFiles = []string{
-	"agents/",
-	"docs/architecture.md",
-	"docs/conflict-resolution.md",
-	"docs/conventions.md",
-	"docs/cost-policy.md",
-	"docs/glossary.md",
-	"docs/protocols.md",
-	"docs/role-selector.md",
-	"docs/secrets-policy.md",
-	"docs/workflow-selector.md",
+	".github/agents/",
+	".github/skills/",
+	".github/instructions/",
 	".github/copilot-instructions.md",
-	"CLAUDE.md",
-	".cursorrules",
+	".github/ISSUE_TEMPLATE/",
+	".github/PULL_REQUEST_TEMPLATE.md",
+	"docs/",
+	".editorconfig",
+	".pre-commit-config.yaml",
 	"Makefile",
-}
-
-// pathRemaps maps source path prefixes to destination prefixes.
-// Files under these source prefixes are written to the remapped destination
-// in target repos, keeping framework files hidden under .teamwork/.
-var pathRemaps = map[string]string{
-	"agents/": ".teamwork/agents/",
-	"docs/":   ".teamwork/docs/",
 }
 
 // StarterTemplates maps relative path to content for files created once on install.
@@ -88,15 +76,14 @@ func Install(dir, owner, repo, ref string) error {
 
 	written := 0
 	for _, f := range files {
-		destPath := remapPath(f.Path)
-		dst := filepath.Join(dir, destPath)
+		dst := filepath.Join(dir, f.Path)
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return fmt.Errorf("creating directory for %s: %w", destPath, err)
+			return fmt.Errorf("creating directory for %s: %w", f.Path, err)
 		}
 		if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-			return fmt.Errorf("writing %s: %w", destPath, err)
+			return fmt.Errorf("writing %s: %w", f.Path, err)
 		}
-		m.Files[destPath] = sha256hex(f.Data)
+		m.Files[f.Path] = sha256hex(f.Data)
 		written++
 	}
 
@@ -173,26 +160,25 @@ func Update(dir, owner, repo, ref string, force bool) error {
 	var skippedPaths []string
 
 	for _, f := range files {
-		destPath := remapPath(f.Path)
 		newHash := sha256hex(f.Data)
-		newManifest.Files[destPath] = newHash
-		dst := filepath.Join(dir, destPath)
+		newManifest.Files[f.Path] = newHash
+		dst := filepath.Join(dir, f.Path)
 
 		existing, err := os.ReadFile(dst)
 		if err != nil {
 			// File doesn't exist locally — write it.
 			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-				return fmt.Errorf("creating directory for %s: %w", destPath, err)
+				return fmt.Errorf("creating directory for %s: %w", f.Path, err)
 			}
 			if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-				return fmt.Errorf("writing %s: %w", destPath, err)
+				return fmt.Errorf("writing %s: %w", f.Path, err)
 			}
 			updated++
 			continue
 		}
 
 		currentHash := sha256hex(existing)
-		manifestHash := oldManifest.Files[destPath]
+		manifestHash := oldManifest.Files[f.Path]
 
 		if currentHash == newHash {
 			// Already matches new version.
@@ -203,7 +189,7 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		if currentHash == manifestHash || manifestHash == "" {
 			// User hasn't modified it (or untracked) — overwrite.
 			if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-				return fmt.Errorf("writing %s: %w", destPath, err)
+				return fmt.Errorf("writing %s: %w", f.Path, err)
 			}
 			updated++
 			continue
@@ -212,14 +198,14 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		// User modified the file.
 		if force {
 			if err := os.WriteFile(dst, f.Data, 0o644); err != nil {
-				return fmt.Errorf("writing %s: %w", destPath, err)
+				return fmt.Errorf("writing %s: %w", f.Path, err)
 			}
 			updated++
 			continue
 		}
 
 		skipped++
-		skippedPaths = append(skippedPaths, destPath)
+		skippedPaths = append(skippedPaths, f.Path)
 	}
 
 	if err := writeManifest(dir, newManifest); err != nil {
@@ -229,11 +215,19 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		return err
 	}
 
+	// Clean up deprecated files from previous versions.
+	removed := cleanDeprecatedFiles(dir, oldManifest)
+
+	// If deprecated files were cleaned up, append a migration note to MEMORY.md.
+	if removed > 0 {
+		appendMigrationNote(dir)
+	}
+
 	for _, p := range skippedPaths {
 		fmt.Printf("  skipped (user-modified): %s\n", p)
 	}
-	fmt.Printf("Updated %d, skipped %d (user-modified), %d already up to date (version %s)\n",
-		updated, skipped, upToDate, shortSHA(commitSHA))
+	fmt.Printf("Updated %d, skipped %d (user-modified), %d already up to date, %d deprecated removed (version %s)\n",
+		updated, skipped, upToDate, removed, shortSHA(commitSHA))
 	return nil
 }
 
@@ -354,15 +348,168 @@ func isFrameworkFile(path string) bool {
 	return false
 }
 
-// remapPath applies path remapping for target repo layout.
-// Source paths like "agents/roles/coder.md" become ".teamwork/agents/roles/coder.md".
-func remapPath(path string) string {
-	for src, dst := range pathRemaps {
-		if strings.HasPrefix(path, src) {
-			return dst + strings.TrimPrefix(path, src)
+// deprecatedFiles lists files and directories from previous Teamwork versions
+// that should be removed on update. Entries ending in "/" are directories.
+var deprecatedFiles = []string{
+	"agents/roles/",
+	"agents/workflows/",
+	"CLAUDE.md",
+	".cursorrules",
+}
+
+// deprecatedFileMapping maps individual old file paths to their new locations.
+// Used to migrate user modifications from deprecated files into new files.
+var deprecatedFileMapping = map[string]string{
+	// Roles → Custom Agents
+	"agents/roles/planner.md":                    ".github/agents/planner.agent.md",
+	"agents/roles/architect.md":                  ".github/agents/architect.agent.md",
+	"agents/roles/coder.md":                      ".github/agents/coder.agent.md",
+	"agents/roles/tester.md":                     ".github/agents/tester.agent.md",
+	"agents/roles/reviewer.md":                   ".github/agents/reviewer.agent.md",
+	"agents/roles/security-auditor.md":           ".github/agents/security-auditor.agent.md",
+	"agents/roles/documenter.md":                 ".github/agents/documenter.agent.md",
+	"agents/roles/orchestrator.md":               ".github/agents/orchestrator.agent.md",
+	"agents/roles/optional/triager.md":           ".github/agents/triager.agent.md",
+	"agents/roles/optional/devops.md":            ".github/agents/devops.agent.md",
+	"agents/roles/optional/dependency-manager.md": ".github/agents/dependency-manager.agent.md",
+	"agents/roles/optional/refactorer.md":        ".github/agents/refactorer.agent.md",
+	// Workflows → Skills
+	"agents/workflows/feature.md":           ".github/skills/feature-workflow/SKILL.md",
+	"agents/workflows/bugfix.md":            ".github/skills/bugfix-workflow/SKILL.md",
+	"agents/workflows/refactor.md":          ".github/skills/refactor-workflow/SKILL.md",
+	"agents/workflows/hotfix.md":            ".github/skills/hotfix-workflow/SKILL.md",
+	"agents/workflows/security-response.md": ".github/skills/security-response/SKILL.md",
+	"agents/workflows/dependency-update.md": ".github/skills/dependency-update/SKILL.md",
+	"agents/workflows/documentation.md":     ".github/skills/documentation-workflow/SKILL.md",
+	"agents/workflows/spike.md":             ".github/skills/spike-workflow/SKILL.md",
+	"agents/workflows/release.md":           ".github/skills/release-workflow/SKILL.md",
+	"agents/workflows/rollback.md":          ".github/skills/rollback-workflow/SKILL.md",
+	// Single files
+	"CLAUDE.md":    ".github/copilot-instructions.md",
+	".cursorrules": ".github/copilot-instructions.md",
+}
+
+// cleanDeprecatedFiles removes deprecated files/directories, migrating any
+// user modifications into the corresponding new files before removal.
+// Returns the number of items removed.
+func cleanDeprecatedFiles(dir string, oldManifest *Manifest) int {
+	removed := 0
+	for _, dep := range deprecatedFiles {
+		target := filepath.Join(dir, dep)
+
+		if strings.HasSuffix(dep, "/") {
+			if _, err := os.Stat(target); os.IsNotExist(err) {
+				continue
+			}
+			// Directory: migrate each modified file, then remove the directory.
+			migrated := 0
+			for manifestPath, manifestHash := range oldManifest.Files {
+				if !strings.HasPrefix(manifestPath, dep) {
+					continue
+				}
+				existing, err := os.ReadFile(filepath.Join(dir, manifestPath))
+				if err != nil {
+					continue
+				}
+				if sha256hex(existing) != manifestHash {
+					// User modified this file — migrate content to new location.
+					if newPath, ok := deprecatedFileMapping[manifestPath]; ok {
+						migrateContent(dir, manifestPath, newPath, existing)
+						migrated++
+					}
+				}
+			}
+			// Also check for files not in manifest (user-created files).
+			filepath.Walk(target, func(path string, info os.FileInfo, err error) error {
+				if err != nil || info.IsDir() {
+					return nil
+				}
+				relPath, _ := filepath.Rel(dir, path)
+				if _, inManifest := oldManifest.Files[relPath]; !inManifest {
+					if newPath, ok := deprecatedFileMapping[relPath]; ok {
+						data, readErr := os.ReadFile(path)
+						if readErr == nil {
+							migrateContent(dir, relPath, newPath, data)
+							migrated++
+						}
+					}
+				}
+				return nil
+			})
+			if err := os.RemoveAll(target); err == nil {
+				removed++
+				if migrated > 0 {
+					fmt.Printf("  migrated %d user-modified file(s) and removed: %s\n", migrated, dep)
+				} else {
+					fmt.Printf("  removed deprecated: %s\n", dep)
+				}
+			}
+		} else {
+			// Single file.
+			existing, err := os.ReadFile(target)
+			if err != nil {
+				continue
+			}
+			manifestHash := oldManifest.Files[dep]
+			if manifestHash != "" && sha256hex(existing) != manifestHash {
+				// User modified — migrate content to new location.
+				if newPath, ok := deprecatedFileMapping[dep]; ok {
+					migrateContent(dir, dep, newPath, existing)
+					fmt.Printf("  migrated user changes and removed: %s → %s\n", dep, newPath)
+				}
+			} else {
+				fmt.Printf("  removed deprecated: %s\n", dep)
+			}
+			if err := os.Remove(target); err == nil {
+				removed++
+			}
 		}
 	}
-	return path
+	return removed
+}
+
+const migrateMarker = "\n\n<!-- MIGRATED FROM %s — review the content below and integrate it into this file, then delete this section -->\n\n"
+
+// migrateContent appends user-modified content from a deprecated file to the
+// corresponding new file with a clear migration marker.
+func migrateContent(dir, oldPath, newPath string, content []byte) {
+	dst := filepath.Join(dir, newPath)
+	f, err := os.OpenFile(dst, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		fmt.Printf("    warning: could not migrate %s → %s: %v\n", oldPath, newPath, err)
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, migrateMarker, oldPath)
+	f.Write(content)
+}
+
+const migrationNote = `
+- **Teamwork update — structure migration:** Roles moved from ` + "`agents/roles/`" + ` to ` + "`.github/agents/*.agent.md`" + ` (Custom Agents — selectable from Copilot dropdown). Workflows moved from ` + "`agents/workflows/`" + ` to ` + "`.github/skills/*/SKILL.md`" + ` (Skills — invocable via ` + "`/skill-name`" + `). ` + "`CLAUDE.md`" + ` and ` + "`.cursorrules`" + ` removed. Run ` + "`/setup-teamwork`" + ` to configure agent files for your project.
+`
+
+// appendMigrationNote adds a one-time migration note to MEMORY.md so agents
+// in the updated repository know about the structural change.
+func appendMigrationNote(dir string) {
+	memoryPath := filepath.Join(dir, "MEMORY.md")
+	data, err := os.ReadFile(memoryPath)
+	if err != nil {
+		return // MEMORY.md doesn't exist; nothing to append to.
+	}
+
+	content := string(data)
+	// Don't append if the note is already present.
+	if strings.Contains(content, "structure migration") {
+		return
+	}
+
+	f, err := os.OpenFile(memoryPath, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprint(f, migrationNote)
+	fmt.Println("  added migration note to MEMORY.md")
 }
 
 func readManifest(dir string) (*Manifest, error) {

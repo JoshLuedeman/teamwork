@@ -14,13 +14,13 @@ Phase 4 of the Teamwork roadmap adds MCP server integration so that:
 
 1. Projects can declare which MCP servers are available for agent use.
 2. Each role can specify which MCP servers benefit its work.
-3. Instruction files (CLAUDE.md, .cursorrules, .github/copilot-instructions.md) surface MCP configuration so agents discover available servers.
+3. Instruction files (`.github/copilot-instructions.md`) surface MCP configuration so agents discover available servers.
 4. The `teamwork` CLI can list, generate, and validate MCP configuration.
 
 Key constraints:
 
 - MCP server configuration must live in `.teamwork/config.yaml` alongside existing project settings (model tiers, roles, workflows). Adding a separate config file creates fragmentation.
-- Role files in `agents/roles/` are framework files managed by `teamwork install`/`teamwork update` (ADR-005). Role-to-MCP-server mappings should be part of these files so they update with the framework.
+- Role files in `.github/agents/` are framework files managed by `teamwork install`/`teamwork update` (ADR-005). Role-to-MCP-server mappings should be part of these files so they update with the framework.
 - Different AI clients (Claude Code, Cursor, GitHub Copilot) each have their own MCP configuration format. Teamwork should not duplicate these — it should document which servers to configure, not replace client-specific config.
 - MCP servers require different runtimes (Node.js, Python, Docker). Teamwork should recommend servers but cannot guarantee runtime availability.
 
@@ -95,7 +95,7 @@ mcp_servers:
 
 ### 2. Role References to MCP Servers
 
-Each role file in `agents/roles/` will include a new `## MCP Servers` section listing which MCP servers benefit that role. This section is informational — it tells agents which servers to look for, not which are guaranteed to be configured.
+Each agent file in `.github/agents/` will include a new `## MCP Servers` section listing which MCP servers benefit that agent. This section is informational — it tells agents which servers to look for, not which are guaranteed to be configured.
 
 Format (added after the `## Model Requirements` section in each role file):
 
@@ -132,16 +132,16 @@ Role files do not contain server launch configuration (that lives in `config.yam
 
 ### 3. Instruction File Surfacing
 
-The instruction files (CLAUDE.md, .cursorrules, .github/copilot-instructions.md) will include a section that tells agents how to discover MCP server configuration. This section is part of the framework files maintained by `teamwork install`/`teamwork update`.
+The instruction file (`.github/copilot-instructions.md`) will include a section that tells agents how to discover MCP server configuration. This section is part of the framework files maintained by `teamwork install`/`teamwork update`.
 
-Add the following section to each instruction file:
+Add the following section to the instruction file:
 
 ```markdown
 ## MCP Servers
 
 If your environment has MCP servers configured, use them to enhance your work.
 Run `teamwork mcp list` to see which servers are defined for this project.
-Check your role file's "MCP Servers" section for which servers benefit your role.
+Check your agent file's "MCP Servers" section for which servers benefit your role.
 
 Common servers:
 - **github** — Repository operations (issues, PRs, code search). Available to all roles.
@@ -150,7 +150,7 @@ Common servers:
 - **playwright** — Browser automation. Useful for tester.
 ```
 
-This section is deliberately brief. It points agents to `teamwork mcp list` for the authoritative list rather than duplicating config. The instruction files are framework files — they cannot contain project-specific MCP server lists because those vary per project.
+This section is deliberately brief. It points agents to `teamwork mcp list` for the authoritative list rather than duplicating config. The instruction file is a framework file — it cannot contain project-specific MCP server lists because those vary per project.
 
 ### 4. The `teamwork mcp` CLI Command
 
@@ -334,9 +334,9 @@ Provides: browser automation via accessibility tree snapshots, page navigation, 
 
 6. **Update `internal/validate/validate.go`** — Add MCP validation checks to the existing `Run` function.
 
-7. **Update role files** — Add `## MCP Servers` section to each of the 8 role files in `agents/roles/`.
+7. **Update agent files** — Add `## MCP Servers` section to each of the agent files in `.github/agents/`.
 
-8. **Update instruction files** — Add the `## MCP Servers` section to `CLAUDE.md`, `.cursorrules`, and `.github/copilot-instructions.md`.
+8. **Update instruction file** — Add the `## MCP Servers` section to `.github/copilot-instructions.md`.
 
 9. **Update `docs/cli.md`** — Add `teamwork mcp` section documenting subcommands, flags, and examples.
 
@@ -356,8 +356,8 @@ Provides: browser automation via accessibility tree snapshots, page navigation, 
 | Alternative | Why It Was Rejected |
 |---|---|
 | Separate `.teamwork/mcp.yaml` config file | Fragments configuration. Users already manage `.teamwork/config.yaml` for roles, model tiers, and workflows. MCP servers are another dimension of the same orchestration config. A single file keeps everything discoverable. |
-| Store MCP config directly in instruction files (CLAUDE.md, .cursorrules) | Instruction files are framework files updated by `teamwork update`. Project-specific MCP server lists would be overwritten on update. Config belongs in `.teamwork/config.yaml` which is a starter file (never overwritten). |
+| Store MCP config directly in instruction file (`.github/copilot-instructions.md`) | Instruction file is a framework file updated by `teamwork update`. Project-specific MCP server lists would be overwritten on update. Config belongs in `.teamwork/config.yaml` which is a starter file (never overwritten). |
 | Auto-install MCP server runtimes | Out of scope. Runtime management (Node.js, Python, Docker) is a system-level concern. Teamwork is a development template, not a package manager. Users install runtimes; Teamwork validates they're available. |
-| Embed MCP server configs in role files | Role files are framework files, not project-specific. Different projects need different MCP servers. The role files should say "I benefit from server X" (informational), not "server X is at this command" (configuration). |
+| Embed MCP server configs in agent files | Agent files are framework files, not project-specific. Different projects need different MCP servers. The agent files should say "I benefit from server X" (informational), not "server X is at this command" (configuration). |
 | Skip the `teamwork mcp config` command and let users manually configure each client | Manual configuration is error-prone and tedious when multiple MCP servers and multiple clients are involved. The `config` command generates correct snippets from a single source of truth. Low implementation cost, high user value. |
 | Use only remote/hosted MCP servers (no local command support) | Many MCP servers are local-only or work better locally (filesystem access, faster response). The schema must support both local (`command`+`args`) and remote (`url`+`headers`) servers. |

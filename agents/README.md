@@ -1,16 +1,18 @@
 # Teamwork — Agent-Native Development Framework
 
-Teamwork is a framework where AI coding agents are primary contributors. Roles define behavior, not tools. Each agent reads its role file to understand its identity, responsibilities, constraints, and quality bar — then acts accordingly within defined workflows.
+> **⚠️ Migration Notice:** Agent files have moved to `.github/agents/*.agent.md` (Custom Agents) and workflow files have moved to `.github/skills/*/SKILL.md` (Skills). The files below in `roles/` and `workflows/` are legacy copies. See `.github/agents/` and `.github/skills/` for the current versions.
+
+Teamwork is a framework where AI coding agents are primary contributors. Agents are defined as Custom Agent files in `.github/agents/`. Each agent reads its agent file to understand its identity, responsibilities, constraints, and quality bar — then acts accordingly within defined Skills (workflows).
 
 ## How It Works
 
-### Roles Define Behavior
+### Agents Define Behavior
 
-Each role file is a complete behavioral contract. An agent assigned a role reads that file and follows it. Roles are deliberately separated so that no single agent has conflicting incentives — the coder doesn't review their own code, the reviewer doesn't modify it, and the planner never implements.
+Each agent file (`.github/agents/*.agent.md`) is a complete behavioral contract. An agent assigned a role reads that file and follows it. Agents are deliberately separated so that no single agent has conflicting incentives — the coder doesn't review their own code, the reviewer doesn't modify it, and the planner never implements.
 
-### Agents Read Their Role File
+### Agents Read Their Agent File
 
-When an agent starts work, it reads exactly one role file. That file tells it:
+When an agent starts work, it reads exactly one agent file. That file tells it:
 
 - **Who it is** and what it's responsible for
 - **What inputs** it needs before starting
@@ -19,52 +21,49 @@ When an agent starts work, it reads exactly one role file. That file tells it:
 - **What quality bar** it must meet
 - **When to escalate** to a human
 
-### Workflows Coordinate Roles
+### Skills Coordinate Agents
 
-Roles don't operate in isolation. Workflows define how roles hand off work to each other — what triggers each role, what artifacts flow between them, and what the end-to-end process looks like. See the [workflows/](workflows/) directory for defined workflows.
+Agents don't operate in isolation. Skills (in `.github/skills/`) define how agents hand off work to each other — what triggers each agent, what artifacts flow between them, and what the end-to-end process looks like.
 
-| Workflow | File | When to Use |
-|----------|------|-------------|
-| Feature | [workflows/feature.md](workflows/feature.md) | New functionality from a goal or requirement |
-| Bugfix | [workflows/bugfix.md](workflows/bugfix.md) | Fixing a reported defect |
-| Refactor | [workflows/refactor.md](workflows/refactor.md) | Improving code quality without changing behavior |
-| Hotfix | [workflows/hotfix.md](workflows/hotfix.md) | Urgent production fix requiring immediate resolution |
-| Security Response | [workflows/security-response.md](workflows/security-response.md) | Responding to a discovered security vulnerability |
-| Dependency Update | [workflows/dependency-update.md](workflows/dependency-update.md) | Updating third-party dependencies |
-| Documentation | [workflows/documentation.md](workflows/documentation.md) | Standalone documentation creation or updates |
-| Spike | [workflows/spike.md](workflows/spike.md) | Research or technical investigation |
-| Release | [workflows/release.md](workflows/release.md) | Preparing and publishing a release |
-| Rollback | [workflows/rollback.md](workflows/rollback.md) | Rolling back failed deployments or changes |
+| Skill | File | When to Use |
+|-------|------|-------------|
+| Feature | [.github/skills/feature/SKILL.md](../.github/skills/feature/SKILL.md) | New functionality from a goal or requirement |
+| Bugfix | [.github/skills/bugfix/SKILL.md](../.github/skills/bugfix/SKILL.md) | Fixing a reported defect |
+| Refactor | [.github/skills/refactor/SKILL.md](../.github/skills/refactor/SKILL.md) | Improving code quality without changing behavior |
+| Hotfix | [.github/skills/hotfix/SKILL.md](../.github/skills/hotfix/SKILL.md) | Urgent production fix requiring immediate resolution |
+| Security Response | [.github/skills/security-response/SKILL.md](../.github/skills/security-response/SKILL.md) | Responding to a discovered security vulnerability |
+| Dependency Update | [.github/skills/dependency-update/SKILL.md](../.github/skills/dependency-update/SKILL.md) | Updating third-party dependencies |
+| Documentation | [.github/skills/documentation/SKILL.md](../.github/skills/documentation/SKILL.md) | Standalone documentation creation or updates |
+| Spike | [.github/skills/spike/SKILL.md](../.github/skills/spike/SKILL.md) | Research or technical investigation |
+| Release | [.github/skills/release/SKILL.md](../.github/skills/release/SKILL.md) | Preparing and publishing a release |
+| Rollback | [.github/skills/rollback/SKILL.md](../.github/skills/rollback/SKILL.md) | Rolling back failed deployments or changes |
 
-## Core Roles
+## Core Agents
 
-These roles cover the essential software development lifecycle:
+These agents cover the essential software development lifecycle:
 
-| Role | File | Description |
-|------|------|-------------|
-| **Planner** | [roles/planner.md](roles/planner.md) | Breaks goals into actionable tasks with acceptance criteria |
-| **Architect** | [roles/architect.md](roles/architect.md) | Makes design decisions, evaluates tradeoffs, produces ADRs |
-| **Coder** | [roles/coder.md](roles/coder.md) | Implements tasks by writing code and tests, opens PRs |
-| **Tester** | [roles/tester.md](roles/tester.md) | Writes and runs tests with an adversarial mindset |
-| **Reviewer** | [roles/reviewer.md](roles/reviewer.md) | Reviews PRs for quality, correctness, and standards |
-| **Security Auditor** | [roles/security-auditor.md](roles/security-auditor.md) | Checks for vulnerabilities, secret leaks, and unsafe patterns |
-| **Documenter** | [roles/documenter.md](roles/documenter.md) | Keeps docs in sync with code changes |
-| **Orchestrator** | [roles/orchestrator.md](roles/orchestrator.md) | Coordinates workflows, dispatches roles, validates handoffs, enforces quality gates |
+| Agent | File | Description |
+|-------|------|-------------|
+| **Planner** | [.github/agents/planner.agent.md](../.github/agents/planner.agent.md) | Breaks goals into actionable tasks with acceptance criteria |
+| **Architect** | [.github/agents/architect.agent.md](../.github/agents/architect.agent.md) | Makes design decisions, evaluates tradeoffs, produces ADRs |
+| **Coder** | [.github/agents/coder.agent.md](../.github/agents/coder.agent.md) | Implements tasks by writing code and tests, opens PRs |
+| **Tester** | [.github/agents/tester.agent.md](../.github/agents/tester.agent.md) | Writes and runs tests with an adversarial mindset |
+| **Reviewer** | [.github/agents/reviewer.agent.md](../.github/agents/reviewer.agent.md) | Reviews PRs for quality, correctness, and standards |
+| **Security Auditor** | [.github/agents/security-auditor.agent.md](../.github/agents/security-auditor.agent.md) | Checks for vulnerabilities, secret leaks, and unsafe patterns |
+| **Documenter** | [.github/agents/documenter.agent.md](../.github/agents/documenter.agent.md) | Keeps docs in sync with code changes |
+| **Orchestrator** | [.github/agents/orchestrator.agent.md](../.github/agents/orchestrator.agent.md) | Coordinates workflows, dispatches roles, validates handoffs, enforces quality gates |
 
-## Optional Roles
+## Specialized Agents
 
-Add these when your project needs them:
+| Agent | File | Description |
+|-------|------|-------------|
+| **@lint-agent** | [.github/agents/lint-agent.agent.md](../.github/agents/lint-agent.agent.md) | Runs linters and auto-fixes code style issues |
+| **@api-agent** | [.github/agents/api-agent.agent.md](../.github/agents/api-agent.agent.md) | Designs, implements, and validates API endpoints |
+| **@dba-agent** | [.github/agents/dba-agent.agent.md](../.github/agents/dba-agent.agent.md) | Manages database schemas, migrations, and query optimization |
 
-| Role | File | Description |
-|------|------|-------------|
-| **Triager** | [roles/optional/triager.md](roles/optional/triager.md) | Categorizes issues, assigns priority, routes to workflows |
-| **DevOps** | [roles/optional/devops.md](roles/optional/devops.md) | Manages CI/CD, deployments, and infrastructure-as-code |
-| **Dependency Manager** | [roles/optional/dependency-manager.md](roles/optional/dependency-manager.md) | Monitors and updates dependencies safely |
-| **Refactorer** | [roles/optional/refactorer.md](roles/optional/refactorer.md) | Improves code quality without changing behavior |
+## Agent File Structure
 
-## Role File Structure
-
-Every role file follows this exact structure:
+Every agent file follows this exact structure:
 
 1. **Identity** — Who you are and your purpose
 2. **Responsibilities** — What you do

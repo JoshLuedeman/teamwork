@@ -72,8 +72,12 @@ internal/
   validate/           — Validation checks
   workflow/           — Workflow engine (ties everything together)
 agents/
-  roles/              — Role definitions (8 core roles)
-  workflows/          — Workflow step guides (10 types)
+  roles/              — Role definitions (legacy — see .github/agents/)
+  workflows/          — Workflow step guides (legacy — see .github/skills/)
+.github/
+  agents/             — Custom Agent definitions (11 agents)
+  skills/             — Skill definitions (10 workflow types)
+  instructions/       — Path-specific instructions
 docs/                 — Documentation and ADRs
 .teamwork/            — Orchestration state (config, handoffs, memory, metrics)
 scripts/              — Build, test, and lint scripts
@@ -117,21 +121,21 @@ test(metrics): add defect tracking tests
 - **Clear description** — explain what changed, why, and how to verify
 - **Link issues** — reference related GitHub issues (e.g., `Fixes #42`)
 
-## Adding a New Role
+## Adding a New Agent
 
-Roles live in `agents/roles/`. To add a new role:
+Agent files live in `.github/agents/`. To add a new agent:
 
-1. Create `agents/roles/<role-name>.md` following the existing template
+1. Create `.github/agents/<agent-name>.agent.md` following the existing template
 2. Include all required sections: Identity, Model Requirements, Responsibilities, Inputs, Outputs, Rules, Quality Bar, Escalation
-3. Add the role to `docs/role-selector.md` with its tier and selection criteria
+3. Add the agent to `docs/role-selector.md` with its tier and selection criteria
 4. Update `docs/glossary.md` if the role introduces new terminology
 5. Run `teamwork validate` to check the new role file
 
-## Adding a New Workflow
+## Adding a New Skill (Workflow)
 
-Workflows live in `agents/workflows/`. To add a new workflow:
+Skills live in `.github/skills/`. To add a new skill:
 
-1. Create `agents/workflows/<workflow-type>.md` with step-by-step instructions
+1. Create `.github/skills/<skill-name>/SKILL.md` with step-by-step instructions
 2. Add the workflow type to the `definitions` map in `internal/workflow/engine.go`
 3. Define the step sequence (step number, role, action description)
 4. Update `docs/cli.md` to list the new workflow type under `teamwork start`

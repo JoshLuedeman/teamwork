@@ -1,6 +1,6 @@
 # Role Selector
 
-A guide to choosing the right role for your task. When no role is specified, use this to determine which role to adopt. See `agents/roles/` for full role definitions.
+A guide to choosing the right agent for your task. When no agent is specified, use this to determine which agent to invoke. See `.github/agents/` for full agent definitions.
 
 ## Decision Tree
 
@@ -39,14 +39,26 @@ Does this involve writing or updating documentation?
 ├── Yes → Documenter
 └── No ↓
 
-Is the task too large or ambiguous to fit one role?
+Does this involve linting, code style, or formatting fixes?
+├── Yes → @lint-agent
+└── No ↓
+
+Does this involve API design, implementation, or validation?
+├── Yes → @api-agent
+└── No ↓
+
+Does this involve database schemas, migrations, or query optimization?
+├── Yes → @dba-agent
+└── No ↓
+
+Is the task too large or ambiguous to fit one agent?
 ├── Yes → Planner (break it down first)
 └── No → Coder (default for implementation)
 ```
 
-## Intent-to-Role Table
+## Intent-to-Agent Table
 
-| What the user is asking | Role | Why |
+| What the user is asking | Agent | Why |
 |---|---|---|
 | "Break down this goal" / "Plan this feature" / "Create tasks for..." | **Planner** | Decomposing goals into actionable tasks |
 | "How should we architect..." / "Design the system for..." / "Evaluate tradeoffs" | **Architect** | System design and decision-making |
@@ -56,6 +68,9 @@ Is the task too large or ambiguous to fit one role?
 | "Check for vulnerabilities" / "Audit security" / "Is this safe?" | **Security Auditor** | Security analysis |
 | "Update the docs" / "Write a README" / "Document this API" | **Documenter** | Documentation |
 | "Start the feature workflow" / "What's the status?" / "What should happen next?" | **Orchestrator** | Workflow coordination |
+| "Fix lint errors" / "Run linters" / "Format this code" | **@lint-agent** | Linting and code style |
+| "Design the API" / "Add an endpoint" / "Validate the API contract" | **@api-agent** | API design and implementation |
+| "Write a migration" / "Optimize this query" / "Design the schema" | **@dba-agent** | Database operations |
 
 ## Context-Based Routing
 
@@ -76,8 +91,8 @@ When intent alone isn't enough, use context clues:
 
 Some requests span multiple roles. When that happens:
 
-1. **Route to Planner first** — have it break the task into role-specific subtasks.
-2. **If the task is small** (single file, clear scope) — route to the primary role and let it handle adjacent concerns.
+1. **Route to Planner first** — have it break the task into agent-specific subtasks.
+2. **If the task is small** (single file, clear scope) — route to the primary agent and let it handle adjacent concerns.
 3. **If the task is large** (multiple files, unclear scope) — always plan first.
 
 Examples:
@@ -88,9 +103,9 @@ Examples:
 
 ## Model Tier Guide
 
-Each role has a recommended model tier based on cognitive complexity. Use the cheapest model that reliably handles the role's demands (Principle of Least Power).
+Each agent has a recommended model tier based on cognitive complexity. Use the cheapest model that reliably handles the agent's demands (Principle of Least Power).
 
-| Role | Tier | Rationale |
+| Agent | Tier | Rationale |
 |---|---|---|
 | **Planner** | Premium | Complex goal decomposition, dependency analysis, scope judgment |
 | **Architect** | Premium | Deep tradeoff analysis, multi-system reasoning, consequential decisions |
@@ -100,6 +115,9 @@ Each role has a recommended model tier based on cognitive complexity. Use the ch
 | **Security Auditor** | Premium | Specialized domain knowledge, high cost of missed vulnerabilities |
 | **Documenter** | Fast | Structured prose, summarization, low reasoning depth |
 | **Orchestrator** | Fast | Rule-following, state management, routing logic |
+| **@lint-agent** | Fast | Rule-based fixes, structured output, low reasoning depth |
+| **@api-agent** | Standard | API design patterns, contract validation, bounded scope |
+| **@dba-agent** | Standard | Schema design, query optimization, structured domain |
 
 **Tier definitions** (configure actual models in `.teamwork/config.yaml`):
 
@@ -111,7 +129,7 @@ Each role has a recommended model tier based on cognitive complexity. Use the ch
 
 ## Within a Workflow
 
-If you're already in an active workflow (check `.teamwork/state/`), role selection is predetermined — follow the step sequence defined in the workflow file. The orchestrator or the state file tells you which role is next.
+If you're already in an active workflow (check `.teamwork/state/`), agent selection is predetermined — follow the step sequence defined in the skill file. The orchestrator or the state file tells you which agent is next.
 
 Only use this selector for:
 - **Ad-hoc tasks** not part of a tracked workflow

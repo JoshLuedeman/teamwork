@@ -54,32 +54,34 @@ gh teamwork init
 
 ```
 teamwork/
-├── agents/                        # Agent Framework
-│   ├── README.md                  # How the role system works
-│   ├── roles/                     # Behavioral contracts for each role
-│   │   ├── planner.md
-│   │   ├── architect.md
-│   │   ├── coder.md
-│   │   ├── tester.md
-│   │   ├── reviewer.md
-│   │   ├── security-auditor.md
-│   │   ├── documenter.md
-│   │   └── optional/              # Add-on roles for larger projects
-│   │       ├── triager.md
-│   │       ├── devops.md
-│   │       ├── dependency-manager.md
-│   │       └── refactorer.md
-│   └── workflows/                 # End-to-end process definitions
-│       ├── feature.md
-│       ├── bugfix.md
-│       ├── refactor.md
-│       ├── hotfix.md
-│       ├── security-response.md
-│       ├── dependency-update.md
-│       ├── documentation.md
-│       ├── spike.md
-│       ├── release.md
-│       └── rollback.md
+├── .github/                       # GitHub & Copilot Configuration
+│   ├── agents/                    # Custom Agents (behavioral contracts)
+│   │   ├── planner.agent.md
+│   │   ├── architect.agent.md
+│   │   ├── coder.agent.md
+│   │   ├── tester.agent.md
+│   │   ├── reviewer.agent.md
+│   │   ├── security-auditor.agent.md
+│   │   ├── documenter.agent.md
+│   │   ├── orchestrator.agent.md
+│   │   ├── lint-agent.agent.md
+│   │   ├── api-agent.agent.md
+│   │   └── dba-agent.agent.md
+│   ├── skills/                    # Skills (end-to-end workflow definitions)
+│   │   ├── feature/SKILL.md
+│   │   ├── bugfix/SKILL.md
+│   │   ├── refactor/SKILL.md
+│   │   ├── hotfix/SKILL.md
+│   │   ├── security-response/SKILL.md
+│   │   ├── dependency-update/SKILL.md
+│   │   ├── documentation/SKILL.md
+│   │   ├── spike/SKILL.md
+│   │   ├── release/SKILL.md
+│   │   └── rollback/SKILL.md
+│   ├── instructions/              # Path-specific instructions
+│   ├── copilot-instructions.md    # GitHub Copilot custom instructions
+│   ├── ISSUE_TEMPLATE/            # Issue templates (bug, task, planning)
+│   └── PULL_REQUEST_TEMPLATE.md   # PR template
 ├── docs/                          # Documentation
 │   ├── onboarding.md              # Getting started for humans and agents
 │   ├── conventions.md             # Code, git, and testing standards
@@ -99,53 +101,48 @@ teamwork/
 │   ├── build.sh                   # Build the project
 │   ├── plan.sh                    # Invoke planning agent
 │   └── review.sh                  # Invoke review agent
-├── .github/                       # GitHub Templates
-│   ├── ISSUE_TEMPLATE/            # Issue templates (bug, task, planning)
-│   ├── PULL_REQUEST_TEMPLATE.md   # PR template
-│   └── copilot-instructions.md   # GitHub Copilot custom instructions
 ├── MEMORY.md                      # Project context (read at session start)
 ├── CHANGELOG.md                   # Project changelog
 ├── Makefile                       # Central command interface
-├── CLAUDE.md                      # Claude Code custom instructions
-├── .cursorrules                   # Cursor custom instructions
 ├── .editorconfig                  # Editor formatting standards
 ├── .pre-commit-config.yaml        # Pre-commit hook configuration
 └── .gitignore
 ```
 
-## Agent Roles
+## Agents
 
-Eight core roles cover the software development lifecycle. Each role file is a complete behavioral contract defining identity, responsibilities, inputs, outputs, rules, quality bar, and escalation policy.
+Eleven agents cover the software development lifecycle. Each agent file (Custom Agent) is a complete behavioral contract defining identity, responsibilities, inputs, outputs, rules, quality bar, and escalation policy.
 
-| Role | File | Description |
-|------|------|-------------|
-| Planner | [`planner.md`](agents/roles/planner.md) | Breaks goals into actionable tasks with acceptance criteria |
-| Architect | [`architect.md`](agents/roles/architect.md) | Makes design decisions, evaluates tradeoffs, produces ADRs |
-| Coder | [`coder.md`](agents/roles/coder.md) | Implements tasks by writing code and tests, opens PRs |
-| Tester | [`tester.md`](agents/roles/tester.md) | Writes and runs tests with an adversarial mindset |
-| Reviewer | [`reviewer.md`](agents/roles/reviewer.md) | Reviews PRs for quality, correctness, and standards |
-| Security Auditor | [`security-auditor.md`](agents/roles/security-auditor.md) | Checks for vulnerabilities, secret leaks, and unsafe patterns |
-| Documenter | [`documenter.md`](agents/roles/documenter.md) | Keeps docs in sync with code changes |
-| Orchestrator | [`orchestrator.md`](agents/roles/orchestrator.md) | Coordinates workflows, dispatches roles, validates handoffs |
+| Agent | File | Description |
+|-------|------|-------------|
+| Planner | [`planner.agent.md`](.github/agents/planner.agent.md) | Breaks goals into actionable tasks with acceptance criteria |
+| Architect | [`architect.agent.md`](.github/agents/architect.agent.md) | Makes design decisions, evaluates tradeoffs, produces ADRs |
+| Coder | [`coder.agent.md`](.github/agents/coder.agent.md) | Implements tasks by writing code and tests, opens PRs |
+| Tester | [`tester.agent.md`](.github/agents/tester.agent.md) | Writes and runs tests with an adversarial mindset |
+| Reviewer | [`reviewer.agent.md`](.github/agents/reviewer.agent.md) | Reviews PRs for quality, correctness, and standards |
+| Security Auditor | [`security-auditor.agent.md`](.github/agents/security-auditor.agent.md) | Checks for vulnerabilities, secret leaks, and unsafe patterns |
+| Documenter | [`documenter.agent.md`](.github/agents/documenter.agent.md) | Keeps docs in sync with code changes |
+| Orchestrator | [`orchestrator.agent.md`](.github/agents/orchestrator.agent.md) | Coordinates workflows, dispatches roles, validates handoffs |
+| Lint Agent | [`lint-agent.agent.md`](.github/agents/lint-agent.agent.md) | Runs linters and auto-fixes code style issues |
+| API Agent | [`api-agent.agent.md`](.github/agents/api-agent.agent.md) | Designs, implements, and validates API endpoints |
+| DBA Agent | [`dba-agent.agent.md`](.github/agents/dba-agent.agent.md) | Manages database schemas, migrations, and query optimization |
 
-Four optional roles are available in [`agents/roles/optional/`](agents/roles/optional/) for projects that need them: **Triager**, **DevOps**, **Dependency Manager**, and **Refactorer**. See [`agents/README.md`](agents/README.md) for full details.
+## Skills (Workflows)
 
-## Workflows
+Ten Skills define how agents coordinate to deliver work end-to-end.
 
-Ten workflows define how roles coordinate to deliver work end-to-end.
-
-| Workflow | File | When to Use |
-|----------|------|-------------|
-| Feature | [`feature.md`](agents/workflows/feature.md) | New functionality from a goal or requirement |
-| Bugfix | [`bugfix.md`](agents/workflows/bugfix.md) | Fixing a reported defect |
-| Refactor | [`refactor.md`](agents/workflows/refactor.md) | Improving code quality without changing behavior |
-| Hotfix | [`hotfix.md`](agents/workflows/hotfix.md) | Urgent production fix requiring immediate resolution |
-| Security Response | [`security-response.md`](agents/workflows/security-response.md) | Responding to a discovered security vulnerability |
-| Dependency Update | [`dependency-update.md`](agents/workflows/dependency-update.md) | Updating third-party dependencies |
-| Documentation | [`documentation.md`](agents/workflows/documentation.md) | Standalone documentation creation or updates |
-| Spike | [`spike.md`](agents/workflows/spike.md) | Research or technical investigation |
-| Release | [`release.md`](agents/workflows/release.md) | Preparing and publishing a release |
-| Rollback | [`rollback.md`](agents/workflows/rollback.md) | Rolling back failed deployments or changes |
+| Skill | File | When to Use |
+|-------|------|-------------|
+| Feature | [`feature/SKILL.md`](.github/skills/feature/SKILL.md) | New functionality from a goal or requirement |
+| Bugfix | [`bugfix/SKILL.md`](.github/skills/bugfix/SKILL.md) | Fixing a reported defect |
+| Refactor | [`refactor/SKILL.md`](.github/skills/refactor/SKILL.md) | Improving code quality without changing behavior |
+| Hotfix | [`hotfix/SKILL.md`](.github/skills/hotfix/SKILL.md) | Urgent production fix requiring immediate resolution |
+| Security Response | [`security-response/SKILL.md`](.github/skills/security-response/SKILL.md) | Responding to a discovered security vulnerability |
+| Dependency Update | [`dependency-update/SKILL.md`](.github/skills/dependency-update/SKILL.md) | Updating third-party dependencies |
+| Documentation | [`documentation/SKILL.md`](.github/skills/documentation/SKILL.md) | Standalone documentation creation or updates |
+| Spike | [`spike/SKILL.md`](.github/skills/spike/SKILL.md) | Research or technical investigation |
+| Release | [`release/SKILL.md`](.github/skills/release/SKILL.md) | Preparing and publishing a release |
+| Rollback | [`rollback/SKILL.md`](.github/skills/rollback/SKILL.md) | Rolling back failed deployments or changes |
 
 The **feature workflow** is the most common and follows this progression:
 
@@ -173,20 +170,20 @@ Human          Planner        Architect       Coder          Tester
 3. **Agents execute** — each role picks up work in sequence (or in parallel for independent tasks), following the appropriate workflow.
 4. **Human approves** — review the PR, merge, and the Documenter updates docs.
 
-Everything runs locally in your development environment. No GitHub Actions are consumed. You invoke agents through your AI coding tool of choice (Copilot, Claude Code, Cursor, etc.) and point them at the relevant role file.
+Everything runs locally in your development environment. No GitHub Actions are consumed. You invoke agents through your AI coding tool of choice (Copilot, Claude Code, Cursor, etc.) and point them at the relevant agent file.
 
 ## Customization Guide
 
-### Add a new role
+### Add a new agent
 
-1. Create a file in `agents/roles/` (or `agents/roles/optional/`) following the [standard structure](agents/README.md#role-file-structure): Identity, Responsibilities, Inputs, Outputs, Rules, Quality Bar, Escalation.
-2. Add the role to any workflows that should include it.
-3. Document the role in `agents/README.md`.
+1. Create a file in `.github/agents/` named `<agent-name>.agent.md` following the standard structure: Identity, Responsibilities, Inputs, Outputs, Rules, Quality Bar, Escalation.
+2. Add the agent to any Skills that should include it.
+3. Update `docs/role-selector.md` with the new agent's tier and selection criteria.
 
-### Add a new workflow
+### Add a new Skill (workflow)
 
-1. Create a file in `agents/workflows/` following the existing pattern: Overview, Trigger, Steps (table), Handoff Contracts, Completion Criteria, Notes.
-2. Reference the roles involved and define explicit handoffs between each step.
+1. Create a directory in `.github/skills/<skill-name>/` with a `SKILL.md` file following the existing pattern: Overview, Trigger, Steps (table), Handoff Contracts, Completion Criteria, Notes.
+2. Reference the agents involved and define explicit handoffs between each step.
 
 ### Adapt for your language/stack
 
@@ -198,7 +195,7 @@ Everything runs locally in your development environment. No GitHub Actions are c
 ### Add CI/CD
 
 - Add GitHub Actions workflows in `.github/workflows/` to run `make check` on PRs.
-- Activate the optional **DevOps** role (`agents/roles/optional/devops.md`) for deployment coordination.
+- Activate the optional **DevOps** agent (`.github/agents/devops.agent.md`) for deployment coordination.
 - The `Makefile` targets (`lint`, `test`, `build`, `check`) work identically in CI and locally.
 
 ## Phase 2: Orchestration App

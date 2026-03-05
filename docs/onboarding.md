@@ -10,23 +10,23 @@ Read these files in order. Each one builds on the previous:
 
 1. **`MEMORY.md`** — Current project state, recent decisions, and active context
 2. **`README.md`** — Project purpose, structure, and high-level goals
-3. **`agents/`** — Find your role's guidance file and read it completely
+3. **`.github/agents/`** — Find your agent file and read it completely
 4. **`docs/conventions.md`** — Standards you must follow for code, git, and testing
 5. **`docs/glossary.md`** — Terminology used throughout the project
 6. **`docs/architecture.md`** — Understand past decisions before making new ones
 
 ### Step 2: Understand Your Role
 
-Your guidance file in `agents/` defines:
+Your agent file in `.github/agents/` defines:
 - What you are responsible for
 - What you should **not** do (scope boundaries)
 - Your quality bar — the minimum standard for your output
 - How to hand off work to other roles
 - When to escalate instead of deciding on your own
 
-If your task involves coordinating multiple roles or managing a workflow end-to-end, see the **Orchestrator** role (`agents/roles/orchestrator.md`) for workflow coordination guidance.
+If your task involves coordinating multiple roles or managing a workflow end-to-end, see the **Orchestrator** agent (`.github/agents/orchestrator.agent.md`) for workflow coordination guidance.
 
-If your role file is missing or unclear, escalate to the human operator before proceeding.
+If your agent file is missing or unclear, escalate to the human operator before proceeding.
 
 ### Step 3: Orient to the Codebase
 
@@ -37,7 +37,7 @@ If your role file is missing or unclear, escalate to the human operator before p
 
 ### First Task Checklist for Agents
 
-- [ ] Read your role's guidance file
+- [ ] Read your agent file
 - [ ] Read `docs/conventions.md` and `docs/glossary.md`
 - [ ] Review the project directory structure
 - [ ] Identify the relevant source files for your task
@@ -56,7 +56,7 @@ If your role file is missing or unclear, escalate to the human operator before p
 
 ### Step 2: Understand the Agent Framework
 
-- Read the guidance files in `agents/` to understand what roles exist
+- Read the agent files in `.github/agents/` to understand what agents exist
 - Review `docs/glossary.md` for framework-specific terminology
 - Check `docs/architecture.md` for key decisions and their rationale
 
@@ -74,7 +74,7 @@ If your role file is missing or unclear, escalate to the human operator before p
 
 ### Step 4: Maintaining the Framework
 
-- Update guidance files when roles evolve
+- Update agent files when roles evolve
 - Add new ADRs when significant decisions are made
 - Keep the glossary current as terminology develops
 - Review and refine workflows based on what's working

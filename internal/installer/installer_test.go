@@ -762,6 +762,74 @@ func TestUpdate_VersionAndManifestUpdated(t *testing.T) {
 	}
 }
 
+// -- countCustomizePlaceholders tests --
+
+func TestCountCustomizePlaceholders_WithPlaceholders(t *testing.T) {
+	dir := t.TempDir()
+	agentsDir := filepath.Join(dir, ".github", "agents")
+	_ = os.MkdirAll(agentsDir, 0o755)
+
+	// Agent with placeholder.
+	_ = os.WriteFile(filepath.Join(agentsDir, "coder.agent.md"),
+		[]byte("# Coder\n<!-- CUSTOMIZE: fill in -->\n- **Tech Stack:** [e.g., Go]\n"), 0o644)
+	// Agent without placeholder.
+	_ = os.WriteFile(filepath.Join(agentsDir, "tester.agent.md"),
+		[]byte("# Tester\n- **Tech Stack:** Go, Python\n"), 0o644)
+	// Non-agent file (should be ignored).
+	_ = os.WriteFile(filepath.Join(agentsDir, "README.md"),
+		[]byte("<!-- CUSTOMIZE -->\n"), 0o644)
+
+	got := countCustomizePlaceholders(dir)
+	if got != 1 {
+		t.Errorf("countCustomizePlaceholders = %d, want 1", got)
+	}
+}
+
+func TestCountCustomizePlaceholders_NoPlaceholders(t *testing.T) {
+	dir := t.TempDir()
+	agentsDir := filepath.Join(dir, ".github", "agents")
+	_ = os.MkdirAll(agentsDir, 0o755)
+
+	_ = os.WriteFile(filepath.Join(agentsDir, "coder.agent.md"),
+		[]byte("# Coder\n- **Tech Stack:** Go\n"), 0o644)
+
+	got := countCustomizePlaceholders(dir)
+	if got != 0 {
+		t.Errorf("countCustomizePlaceholders = %d, want 0", got)
+	}
+}
+
+func TestCountCustomizePlaceholders_NoAgentsDir(t *testing.T) {
+	dir := t.TempDir()
+	got := countCustomizePlaceholders(dir)
+	if got != 0 {
+		t.Errorf("countCustomizePlaceholders = %d, want 0 (no agents dir)", got)
+	}
+}
+
+// -- Update initializes .teamwork/ subdirectories --
+
+func TestUpdate_InitializesTeamworkSubdirs(t *testing.T) {
+	dir := t.TempDir()
+	// Pre-create only the version file (simulate old install without subdirs).
+	_ = os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	_ = writeVersion(dir, "oldsha123")
+
+	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
+	tb := makeTarball(newPrefix, map[string]string{
+		".editorconfig": "fresh\n",
+	})
+	if err := serveAndUpdate(t, dir, tb, false); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	for _, sub := range []string{"state", "handoffs", "memory", "metrics"} {
+		if _, err := os.Stat(filepath.Join(dir, ".teamwork", sub)); err != nil {
+			t.Errorf(".teamwork/%s not created during update: %v", sub, err)
+		}
+	}
+}
+
 // -- Integration test (skipped by default) --
 
 func TestInstall_Integration(t *testing.T) {

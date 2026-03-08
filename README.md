@@ -215,6 +215,12 @@ Phase 2 is complete. The Teamwork CLI (`teamwork`) automates workflow coordinati
 
 See [`docs/cli.md`](docs/cli.md) for command reference and [`docs/decisions/004-validate-command-design.md`](docs/decisions/004-validate-command-design.md) and [`docs/decisions/005-install-update-design.md`](docs/decisions/005-install-update-design.md) for design details.
 
+## Phase 3: Auto-Install GitHub App
+
+Phase 3 adds automatic framework installation. A GitHub App + Cloudflare Worker detects new repository creation and pushes Teamwork framework files automatically — no manual `teamwork install` needed.
+
+See [`docs/github-app-setup.md`](docs/github-app-setup.md) for setup instructions.
+
 ## License
 
 [MIT](LICENSE)

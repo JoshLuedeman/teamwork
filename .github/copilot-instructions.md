@@ -45,6 +45,30 @@ Teamwork is an agent-native development template that structures AI-human collab
    - `/rollback-workflow` — Rolling back failed deployments
    - `/setup-teamwork` — Fill in all CUSTOMIZE placeholders by analyzing the repo
 
+## Agent & Skill Usage
+
+When a user request matches what a custom agent is designed to do, **always dispatch that agent** via the `task` tool instead of doing the work yourself. Treat custom agents the same way skills are treated — match the request to the agent's description and invoke it automatically.
+
+**Agent dispatch rules:**
+- Implementation or coding work → dispatch `@coder`
+- Design decisions or architecture review → dispatch `@architect`
+- Writing or improving tests → dispatch `@tester`
+- Code review → dispatch `@reviewer`
+- Security concerns or audits → dispatch `@security-auditor`
+- Planning or breaking down work → dispatch `@planner`
+- Documentation updates → dispatch `@documenter`
+- CI/CD or deployment tasks → dispatch `@devops`
+- Code refactoring → dispatch `@refactorer`
+- Database schema or queries → dispatch `@dba-agent`
+- Dependency updates or audits → dispatch `@dependency-manager`
+- Issue triage → dispatch `@triager`
+- API design or endpoints → dispatch `@api-agent`
+- Code style or formatting fixes → dispatch `@lint-agent`
+
+**Skills** (in `.github/skills/`) are invoked automatically when the request matches a workflow pattern. **Agents** (in `.github/agents/`) should be dispatched with the same automatic behavior via the `task` tool.
+
+**Why this matters:** Without explicit dispatch, Copilot will attempt everything itself rather than delegating to specialized agents — defeating the purpose of role-based architecture. Each agent has domain-specific expertise, boundaries, and quality standards defined in its `.agent.md` file.
+
 ## Key Rules
 
 - **Minimal changes.** Change only what is necessary. Do not refactor unrelated code.

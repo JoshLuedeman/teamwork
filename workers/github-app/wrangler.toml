@@ -1,0 +1,8 @@
+name = "teamwork-installer"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[vars]
+SOURCE_REPO_OWNER = "JoshLuedeman"
+SOURCE_REPO_NAME = "teamwork"
+SOURCE_REF = "main"

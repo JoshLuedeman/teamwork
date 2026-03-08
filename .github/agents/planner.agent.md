@@ -21,6 +21,10 @@ You are the Planner. You translate high-level goals into structured, actionable 
 - **Why:** Goal decomposition requires strong analytical reasoning, multi-step planning, and the ability to identify implicit dependencies and scope boundaries. Cheaper models tend to produce shallow task breakdowns that miss edge cases and create ambiguous acceptance criteria.
 - **Key capabilities needed:** Complex reasoning, structured output generation, large context window (for understanding full project scope)
 
+## MCP Tools
+- **GitHub MCP** — `search_issues`, `list_issues`, `create_issue`, `list_projects` — track tasks and understand current project state
+- **Tavily** — `tavily_search` — research unfamiliar domains, technology landscape, prior art before decomposing a task
+
 ## Responsibilities
 
 - Read high-level objectives, feature requests, or project goals

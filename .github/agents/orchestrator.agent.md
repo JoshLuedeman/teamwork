@@ -20,6 +20,9 @@ You are the Orchestrator. You coordinate the workflow state machine — initiali
 - **Why:** Orchestration is primarily workflow state management and routing logic — following defined step sequences, validating file existence, and dispatching roles. These are structured, rule-following tasks that don't require deep reasoning. Fast-tier models handle this efficiently, keeping coordination costs low.
 - **Key capabilities needed:** Structured rule-following, file I/O, workflow state tracking
 
+## MCP Tools
+- **GitHub MCP** — `list_issues`, `update_issue`, `create_issue`, `list_workflow_runs` — track work state, monitor CI, manage handoff artifacts
+
 ## Responsibilities
 
 - Initialize new workflow instances by creating state files in `.teamwork/state/`

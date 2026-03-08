@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.2.0] — 2026-03-08
+
+### Added
+
+- **Phase 5: Developer Experience & Template Polish**
+  - **Agent auto-dispatch guidance** — Added `## Agent & Skill Usage` section to `copilot-instructions.md` instructing Copilot to automatically dispatch Custom Agents when requests match their purpose (#82, PR #107)
+  - **Product Owner and QA Lead roles** — Two new optional agent roles in `.github/agents/`: Product Owner for backlog management and business priorities; QA Lead for test strategy, quality gates, and release readiness (#60, PR #108)
+  - **`teamwork role create` command** — Scaffolds new Custom Agent files with YAML frontmatter, all required sections, and TODO placeholders; validates kebab-case names and rejects built-in role conflicts; supports `--description` and `--tier` flags (10 tests) (#42, PR #109)
+  - **GitHub Actions CI template** — `.github/workflows/teamwork-ci.yaml.example` template for validating Teamwork structure on push/PR; added `--ci` flag to `teamwork validate` for machine-readable PASS/FAIL output (4 tests) (#59, PR #110)
+  - **Interactive `teamwork init` wizard** — Prompts for project name, GitHub repo, and optional roles when stdin is a TTY; auto-detects non-TTY for CI/piped usage; supports `--non-interactive` flag (10 tests) (#52, PR #111)
+  - **`teamwork logs` command** — Views and filters `.teamwork/metrics/` JSONL activity logs with `--role`, `--action`, `--tail`, and `--since` (ISO dates and relative durations like `24h`, `7d`) (13 tests) (#51, PR #112)
+  - **`teamwork start --dry-run` flag** — Previews workflow steps, roles, model tiers, quality gates, and skip conditions without creating state files (6 tests) (#50, PR #113)
+
 ## [v1.1.0] — 2026-03-08
 
 ### Added

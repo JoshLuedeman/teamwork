@@ -178,6 +178,32 @@ func (c *Client) SetWorkflowLabel(issueNumber int, workflowType, status string) 
 	return c.AddLabel(issueNumber, newLabel)
 }
 
+// CreateIssue creates a new GitHub issue with the given title, body, labels,
+// and assignees. It returns the issue number on success.
+func (c *Client) CreateIssue(title, body string, labels, assignees []string) (int, error) {
+	args := []string{"issue", "create", "--title", title, "--body", body}
+	for _, l := range labels {
+		args = append(args, "--label", l)
+	}
+	for _, a := range assignees {
+		args = append(args, "--assignee", a)
+	}
+	args = append(args, "--json", "number")
+
+	out, err := c.runGH(args...)
+	if err != nil {
+		return 0, fmt.Errorf("github: create issue: %w", err)
+	}
+
+	var result struct {
+		Number int `json:"number"`
+	}
+	if err := json.Unmarshal(out, &result); err != nil {
+		return 0, fmt.Errorf("github: parse created issue: %w", err)
+	}
+	return result.Number, nil
+}
+
 // runGH executes the gh CLI with the given arguments, scoped to the
 // configured repository via -R owner/repo. It returns stdout on success.
 func (c *Client) runGH(args ...string) ([]byte, error) {

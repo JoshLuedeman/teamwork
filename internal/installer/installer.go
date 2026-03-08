@@ -239,8 +239,8 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		updated, skipped, upToDate, removed, shortSHA(commitSHA))
 
 	// Check for unfilled CUSTOMIZE placeholders in agent files and remind the user.
-	if count := countCustomizePlaceholders(dir); count > 0 {
-		fmt.Printf("\n  %d agent file(s) have unfilled <!-- CUSTOMIZE --> placeholders.\n", count)
+	if placeholders := CustomizePlaceholderFiles(dir); len(placeholders) > 0 {
+		fmt.Printf("\n  %d agent file(s) have unfilled <!-- CUSTOMIZE --> placeholders.\n", len(placeholders))
 		fmt.Println("  Run the /setup-teamwork skill in GitHub Copilot to auto-detect your tech stack and fill them in.")
 	}
 
@@ -530,15 +530,15 @@ func appendMigrationNote(dir string) {
 
 const customizePlaceholder = "<!-- CUSTOMIZE"
 
-// countCustomizePlaceholders counts how many .agent.md files under
-// .github/agents/ still contain unfilled <!-- CUSTOMIZE --> placeholders.
-func countCustomizePlaceholders(dir string) int {
+// CustomizePlaceholderFiles returns the names of .agent.md files under
+// .github/agents/ that still contain unfilled <!-- CUSTOMIZE --> placeholders.
+func CustomizePlaceholderFiles(dir string) []string {
 	agentsDir := filepath.Join(dir, ".github", "agents")
 	entries, err := os.ReadDir(agentsDir)
 	if err != nil {
-		return 0
+		return nil
 	}
-	count := 0
+	var files []string
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".agent.md") {
 			continue
@@ -548,10 +548,10 @@ func countCustomizePlaceholders(dir string) int {
 			continue
 		}
 		if strings.Contains(string(data), customizePlaceholder) {
-			count++
+			files = append(files, e.Name())
 		}
 	}
-	return count
+	return files
 }
 
 func readManifest(dir string) (*Manifest, error) {

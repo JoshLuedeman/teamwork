@@ -762,9 +762,9 @@ func TestUpdate_VersionAndManifestUpdated(t *testing.T) {
 	}
 }
 
-// -- countCustomizePlaceholders tests --
+// -- CustomizePlaceholderFiles tests --
 
-func TestCountCustomizePlaceholders_WithPlaceholders(t *testing.T) {
+func TestCustomizePlaceholderFiles_WithPlaceholders(t *testing.T) {
 	dir := t.TempDir()
 	agentsDir := filepath.Join(dir, ".github", "agents")
 	_ = os.MkdirAll(agentsDir, 0o755)
@@ -779,13 +779,16 @@ func TestCountCustomizePlaceholders_WithPlaceholders(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(agentsDir, "README.md"),
 		[]byte("<!-- CUSTOMIZE -->\n"), 0o644)
 
-	got := countCustomizePlaceholders(dir)
-	if got != 1 {
-		t.Errorf("countCustomizePlaceholders = %d, want 1", got)
+	got := CustomizePlaceholderFiles(dir)
+	if len(got) != 1 {
+		t.Errorf("CustomizePlaceholderFiles returned %d files, want 1", len(got))
+	}
+	if len(got) == 1 && got[0] != "coder.agent.md" {
+		t.Errorf("CustomizePlaceholderFiles[0] = %q, want coder.agent.md", got[0])
 	}
 }
 
-func TestCountCustomizePlaceholders_NoPlaceholders(t *testing.T) {
+func TestCustomizePlaceholderFiles_NoPlaceholders(t *testing.T) {
 	dir := t.TempDir()
 	agentsDir := filepath.Join(dir, ".github", "agents")
 	_ = os.MkdirAll(agentsDir, 0o755)
@@ -793,17 +796,17 @@ func TestCountCustomizePlaceholders_NoPlaceholders(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(agentsDir, "coder.agent.md"),
 		[]byte("# Coder\n- **Tech Stack:** Go\n"), 0o644)
 
-	got := countCustomizePlaceholders(dir)
-	if got != 0 {
-		t.Errorf("countCustomizePlaceholders = %d, want 0", got)
+	got := CustomizePlaceholderFiles(dir)
+	if len(got) != 0 {
+		t.Errorf("CustomizePlaceholderFiles returned %d files, want 0", len(got))
 	}
 }
 
-func TestCountCustomizePlaceholders_NoAgentsDir(t *testing.T) {
+func TestCustomizePlaceholderFiles_NoAgentsDir(t *testing.T) {
 	dir := t.TempDir()
-	got := countCustomizePlaceholders(dir)
-	if got != 0 {
-		t.Errorf("countCustomizePlaceholders = %d, want 0 (no agents dir)", got)
+	got := CustomizePlaceholderFiles(dir)
+	if len(got) != 0 {
+		t.Errorf("CustomizePlaceholderFiles returned %d files, want 0 (no agents dir)", len(got))
 	}
 }
 

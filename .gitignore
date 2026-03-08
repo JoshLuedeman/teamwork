@@ -50,3 +50,6 @@ temp/
 .teamwork/framework-version.txt
 .teamwork/framework-manifest.json
 workers/github-app/node_modules/
+
+# Build binary
+/teamwork

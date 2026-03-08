@@ -178,6 +178,36 @@ func (c *Client) SetWorkflowLabel(issueNumber int, workflowType, status string) 
 	return c.AddLabel(issueNumber, newLabel)
 }
 
+// CreateIssue creates a new GitHub issue with the given title, body, labels,
+// and assignees. It returns the issue number on success.
+func (c *Client) CreateIssue(title, body string, labels, assignees []string) (int, error) {
+	args := []string{"issue", "create", "--title", title, "--body", body}
+	for _, l := range labels {
+		args = append(args, "--label", l)
+	}
+	for _, a := range assignees {
+		args = append(args, "--assignee", a)
+	}
+
+	out, err := c.runGH(args...)
+	if err != nil {
+		return 0, fmt.Errorf("github: create issue: %w", err)
+	}
+
+	// gh issue create outputs the issue URL, e.g.
+	// https://github.com/owner/repo/issues/42
+	url := strings.TrimSpace(string(out))
+	parts := strings.Split(url, "/")
+	if len(parts) == 0 {
+		return 0, fmt.Errorf("github: unexpected issue create output: %q", url)
+	}
+	num, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0, fmt.Errorf("github: parse issue number from %q: %w", url, err)
+	}
+	return num, nil
+}
+
 // runGH executes the gh CLI with the given arguments, scoped to the
 // configured repository via -R owner/repo. It returns stdout on success.
 func (c *Client) runGH(args ...string) ([]byte, error) {

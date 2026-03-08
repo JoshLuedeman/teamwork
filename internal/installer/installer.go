@@ -215,6 +215,15 @@ func Update(dir, owner, repo, ref string, force bool) error {
 		return err
 	}
 
+	// Ensure .teamwork/ subdirectories exist (parity with Install).
+	teamworkDir := filepath.Join(dir, ".teamwork")
+	subdirs := []string{"state", "handoffs", "memory", "metrics"}
+	for _, sub := range subdirs {
+		if err := os.MkdirAll(filepath.Join(teamworkDir, sub), 0o755); err != nil {
+			return fmt.Errorf("creating .teamwork/%s: %w", sub, err)
+		}
+	}
+
 	// Clean up deprecated files from previous versions.
 	removed := cleanDeprecatedFiles(dir, oldManifest)
 
@@ -228,6 +237,13 @@ func Update(dir, owner, repo, ref string, force bool) error {
 	}
 	fmt.Printf("Updated %d, skipped %d (user-modified), %d already up to date, %d deprecated removed (version %s)\n",
 		updated, skipped, upToDate, removed, shortSHA(commitSHA))
+
+	// Check for unfilled CUSTOMIZE placeholders in agent files and remind the user.
+	if placeholders := CustomizePlaceholderFiles(dir); len(placeholders) > 0 {
+		fmt.Printf("\n  %d agent file(s) have unfilled <!-- CUSTOMIZE --> placeholders.\n", len(placeholders))
+		fmt.Println("  Run the /setup-teamwork skill in GitHub Copilot to auto-detect your tech stack and fill them in.")
+	}
+
 	return nil
 }
 
@@ -485,7 +501,7 @@ func migrateContent(dir, oldPath, newPath string, content []byte) {
 }
 
 const migrationNote = `
-- **Teamwork update — structure migration:** Roles moved from ` + "`agents/roles/`" + ` to ` + "`.github/agents/*.agent.md`" + ` (Custom Agents — selectable from Copilot dropdown). Workflows moved from ` + "`agents/workflows/`" + ` to ` + "`.github/skills/*/SKILL.md`" + ` (Skills — invocable via ` + "`/skill-name`" + `). ` + "`CLAUDE.md`" + ` and ` + "`.cursorrules`" + ` removed. Run ` + "`/setup-teamwork`" + ` to configure agent files for your project.
+- **Teamwork update — structure migration:** Roles moved from ` + "`agents/roles/`" + ` to ` + "`.github/agents/*.agent.md`" + ` (Custom Agents — selectable from Copilot dropdown). Workflows moved from ` + "`agents/workflows/`" + ` to ` + "`.github/skills/*/SKILL.md`" + ` (Skills — invocable via ` + "`/skill-name`" + `). ` + "`CLAUDE.md`" + ` and ` + "`.cursorrules`" + ` removed. Agent files with ` + "`<!-- CUSTOMIZE -->`" + ` placeholders can be configured by running ` + "`/setup-teamwork`" + ` in GitHub Copilot.
 `
 
 // appendMigrationNote adds a one-time migration note to MEMORY.md so agents
@@ -510,6 +526,32 @@ func appendMigrationNote(dir string) {
 	defer f.Close()
 	fmt.Fprint(f, migrationNote)
 	fmt.Println("  added migration note to MEMORY.md")
+}
+
+const customizePlaceholder = "<!-- CUSTOMIZE"
+
+// CustomizePlaceholderFiles returns the names of .agent.md files under
+// .github/agents/ that still contain unfilled <!-- CUSTOMIZE --> placeholders.
+func CustomizePlaceholderFiles(dir string) []string {
+	agentsDir := filepath.Join(dir, ".github", "agents")
+	entries, err := os.ReadDir(agentsDir)
+	if err != nil {
+		return nil
+	}
+	var files []string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".agent.md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(agentsDir, e.Name()))
+		if err != nil {
+			continue
+		}
+		if strings.Contains(string(data), customizePlaceholder) {
+			files = append(files, e.Name())
+		}
+	}
+	return files
 }
 
 func readManifest(dir string) (*Manifest, error) {

@@ -50,6 +50,25 @@ gh teamwork init
 
 5. **Customize for your project** — Edit the files listed in [Customization Guide](#customization-guide) below.
 
+## Enhance with MCP
+
+Teamwork agents become significantly more capable when paired with MCP (Model Context Protocol) servers. Configure them in `.teamwork/config.yaml` and agents automatically use them for GitHub operations, library lookups, security scanning, web research, and more.
+
+See **[docs/mcp.md](docs/mcp.md)** for full setup instructions and client configuration.
+
+### Recommended servers
+
+| Server | Install | What it unlocks |
+|--------|---------|-----------------| 
+| [GitHub MCP](https://github.com/github/github-mcp-server) | `gh extension install github/gh-mcp` | PRs, issues, CI, Dependabot alerts |
+| [Context7](https://github.com/upstash/context7) | `npx -y @upstash/context7-mcp` | Accurate, up-to-date library docs |
+| [Semgrep](https://github.com/semgrep/mcp) | `pip install semgrep-mcp` | SAST security scanning |
+| [Tavily](https://github.com/tavily-ai/tavily-mcp) | `npx -y tavily-mcp` | Web search and research |
+| [E2B](https://github.com/e2b-dev/e2b-mcp) | `pip install e2b-mcp` | Sandboxed code execution |
+| [Terraform](https://github.com/hashicorp/terraform-mcp-server) | `npx -y terraform-mcp-server@latest` | Terraform Registry and IaC |
+
+After installing, run `teamwork mcp list` to see which servers are configured and ready.
+
 ## Repository Structure
 
 ```

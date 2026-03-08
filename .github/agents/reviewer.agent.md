@@ -26,6 +26,9 @@ You are the Reviewer. You evaluate pull requests for quality, correctness, and c
 - **GitHub MCP** — `get_pull_request_diff`, `get_pull_request_files`, `create_review`, `submit_review`, `list_workflow_runs` — read diffs, check CI, submit structured reviews
 - **Semgrep** — `semgrep_scan` — run SAST on changed files; include findings in review feedback
 - **OSV MCP** — `query_package` — check any new dependencies introduced in the PR for known CVEs
+- **Coverage MCP** — `load_coverage_report`, `check_thresholds` — enforce coverage quality gates; flag PRs that reduce coverage
+- **Commits MCP** — `validate_commit_message` — verify PR commits follow conventional commit format
+- **Complexity MCP** — `analyze_complexity` — flag functions with high cyclomatic complexity in changed files
 
 ## Responsibilities
 

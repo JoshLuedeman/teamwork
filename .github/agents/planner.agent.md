@@ -24,6 +24,7 @@ You are the Planner. You translate high-level goals into structured, actionable 
 ## MCP Tools
 - **GitHub MCP** — `search_issues`, `list_issues`, `create_issue`, `list_projects` — track tasks and understand current project state
 - **Tavily** — `tavily_search` — research unfamiliar domains, technology landscape, prior art before decomposing a task
+- **Changelog MCP** — `list_unreleased`, `suggest_next_version` — review unreleased changes to scope releases and inform planning
 
 ## Responsibilities
 

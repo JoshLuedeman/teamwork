@@ -1,0 +1,9 @@
+mode: set
+github.com/example/pkg/math.go:5.24,7.2 1 1
+github.com/example/pkg/math.go:9.29,11.2 1 1
+github.com/example/pkg/math.go:13.33,15.16 2 1
+github.com/example/pkg/math.go:15.16,17.3 1 0
+github.com/example/pkg/math.go:18.2,18.15 1 1
+github.com/example/pkg/utils.go:5.30,7.2 1 1
+github.com/example/pkg/utils.go:9.31,11.2 1 0
+github.com/example/pkg/utils.go:13.34,15.2 1 0

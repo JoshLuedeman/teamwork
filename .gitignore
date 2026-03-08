@@ -33,8 +33,10 @@ bin/
 
 # Coverage and test output
 coverage/
+!mcp-servers/coverage/
 .coverage
 *.lcov
+!mcp-servers/coverage/tests/fixtures/*.lcov
 htmlcov/
 
 # Logs

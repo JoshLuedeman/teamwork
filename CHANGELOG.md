@@ -4,10 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [v1.0.0] — 2026-03-08
 
 ### Added
 
+- **Phase 3: GitHub App + Cloudflare Worker auto-install** — Automatic Teamwork framework installation for new repositories
+  - **ADR-006** — GitHub App + Cloudflare Worker design document (#15)
+  - **Cloudflare Worker** — TypeScript webhook handler at `workers/github-app/` (#16)
+    - HMAC-SHA256 webhook signature verification via Web Crypto API
+    - GitHub App JWT → installation token authentication
+    - Git Data API for atomic single-commit file push
+    - Fork detection and `.teamwork-skip` opt-out support
+    - Zero runtime dependencies (44 Vitest tests)
+  - **Deployment config** — `wrangler.toml` with secrets documentation (#17)
+  - **Setup guide** — Step-by-step instructions at `docs/github-app-setup.md` (#18)
+  - **E2E test** — Manual verification script at `workers/github-app/e2e/` (#19)
 - **`teamwork cancel` CLI command** — Cancel active or blocked workflows with optional reason (#63)
 - **`teamwork fail` CLI command** — Mark workflows as failed with required reason (#63)
 - **`teamwork doctor` CLI command** — Environment diagnostics with actionable fix suggestions (#49)
@@ -22,6 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Repo field in workflow state** — `StepRecord` and `NextAction` track target repo (#75)
 - **Cross-repo status/next** — `teamwork status` and `teamwork next` show repo context when configured (#74, #76)
 - **Hub-spoke memory sync** — `teamwork memory sync --repo <name> --domain <domains>` copies entries between repos (#77)
+- **Copilot-native restructure** — Agents at `.github/agents/*.agent.md`, Skills at `.github/skills/*/SKILL.md`, Instructions at `.github/instructions/`
+- **15 Custom Agents** — planner, architect, coder, tester, reviewer, security-auditor, documenter, orchestrator, triager, devops, dependency-manager, refactorer, lint-agent, api-agent, dba-agent
+- **10 Skills** — feature, bugfix, refactor, hotfix, security-response, dependency-update, documentation, spike, release, rollback
 - **Tests** — Config tests for repos parsing, metrics tests for defect/cost tracking
 
 ### Changed

@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "teamwork-mcp-commits"
+version = "0.1.0"
+description = "MCP server for conventional commit message generation and validation"
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0"]
+
+[project.scripts]
+teamwork-mcp-commits = "teamwork_mcp_commits.server:main"

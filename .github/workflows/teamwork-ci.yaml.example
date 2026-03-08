@@ -1,0 +1,50 @@
+# Teamwork CI — Copy this file to .github/workflows/teamwork-ci.yaml
+# Validates Teamwork framework structure on every push and PR.
+name: Teamwork CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate Teamwork Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install teamwork CLI
+        run: |
+          # Option 1: Download from GitHub releases
+          curl -sL "https://github.com/JoshLuedeman/teamwork/releases/latest/download/teamwork-linux-amd64" -o /usr/local/bin/teamwork
+          chmod +x /usr/local/bin/teamwork
+
+          # Option 2: Use gh extension (requires gh CLI)
+          # gh extension install JoshLuedeman/gh-teamwork
+          # gh teamwork init
+
+      - name: Validate framework structure
+        run: teamwork validate --ci
+
+      - name: Check agent files exist
+        run: |
+          echo "Checking required agent files..."
+          for role in planner architect coder tester reviewer security-auditor documenter orchestrator; do
+            if [ ! -f ".github/agents/${role}.agent.md" ]; then
+              echo "ERROR: Missing required agent file: .github/agents/${role}.agent.md"
+              exit 1
+            fi
+          done
+          echo "All required agent files present."
+
+      - name: Check skill files exist
+        run: |
+          echo "Checking required skill files..."
+          for skill in feature-workflow bugfix-workflow refactor-workflow hotfix-workflow release-workflow; do
+            if [ ! -f ".github/skills/${skill}/SKILL.md" ]; then
+              echo "WARNING: Missing skill: .github/skills/${skill}/SKILL.md"
+            fi
+          done
+          echo "Skill check complete."

@@ -179,6 +179,15 @@ Open a GitHub issue with:
 
 See `docs/secrets-policy.md` for the project's secrets and credentials policy.
 
+## Continuous Integration
+
+A GitHub Actions workflow template is available at `.github/workflows/teamwork-ci.yaml.example`. Copy it to `.github/workflows/teamwork-ci.yaml` to enable automatic Teamwork structure validation on push and PR.
+
+The workflow validates:
+- `.teamwork/` directory structure
+- Required agent and skill files
+- MCP server configuration
+
 ## Code of Conduct
 
 Be respectful and constructive. We follow the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) code of conduct.

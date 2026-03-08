@@ -78,6 +78,10 @@ const setupIssueTitle = "[TASK] Run /setup-teamwork to configure agent files"
 // setupIssueLabel is applied to setup issues for easy querying.
 const setupIssueLabel = "setup"
 
+// defaultRepoPlaceholder is the placeholder value in config.yaml that
+// indicates the user hasn't configured their repo yet.
+const defaultRepoPlaceholder = "owner/repo"
+
 // maybeCreateSetupIssue creates a GitHub issue assigned to Copilot if
 // unfilled CUSTOMIZE placeholders are detected in agent files. It checks
 // for existing open issues with the same title to avoid duplicates.
@@ -90,20 +94,24 @@ func maybeCreateSetupIssue(dir string) {
 
 	cfg, err := config.Load(dir)
 	if err != nil {
-		return // No config → can't determine target repo.
+		fmt.Println("  Skipping issue creation: could not load .teamwork/config.yaml.")
+		return
 	}
 
 	// Skip if config still has the default placeholder repo.
-	if cfg.Project.Repo == "" || cfg.Project.Repo == "owner/repo" {
+	if cfg.Project.Repo == "" || cfg.Project.Repo == defaultRepoPlaceholder {
+		fmt.Println("  Skipping issue creation: project repo not configured in .teamwork/config.yaml.")
 		return
 	}
 
 	client, err := gh.NewClientFromConfig(cfg)
 	if err != nil {
+		fmt.Printf("  Skipping issue creation: %v\n", err)
 		return
 	}
 	if !client.Available() {
-		return // gh CLI not installed.
+		fmt.Println("  Skipping issue creation: gh CLI not found.")
+		return
 	}
 
 	// Check for an existing open setup issue to avoid duplicates.

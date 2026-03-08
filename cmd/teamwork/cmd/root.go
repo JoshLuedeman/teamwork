@@ -16,6 +16,12 @@ var rootCmd = &cobra.Command{
 	Long:  "Teamwork coordinates AI agent workflows: dispatching roles, tracking state, validating handoffs, and providing human oversight.",
 }
 
+// SetVersion sets the version string displayed by --version.
+// It is called from main with the value injected via ldflags.
+func SetVersion(v string) {
+	rootCmd.Version = v
+}
+
 func Execute() error {
 	return rootCmd.Execute()
 }

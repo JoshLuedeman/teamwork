@@ -188,20 +188,24 @@ func (c *Client) CreateIssue(title, body string, labels, assignees []string) (in
 	for _, a := range assignees {
 		args = append(args, "--assignee", a)
 	}
-	args = append(args, "--json", "number")
 
 	out, err := c.runGH(args...)
 	if err != nil {
 		return 0, fmt.Errorf("github: create issue: %w", err)
 	}
 
-	var result struct {
-		Number int `json:"number"`
+	// gh issue create outputs the issue URL, e.g.
+	// https://github.com/owner/repo/issues/42
+	url := strings.TrimSpace(string(out))
+	parts := strings.Split(url, "/")
+	if len(parts) == 0 {
+		return 0, fmt.Errorf("github: unexpected issue create output: %q", url)
 	}
-	if err := json.Unmarshal(out, &result); err != nil {
-		return 0, fmt.Errorf("github: parse created issue: %w", err)
+	num, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0, fmt.Errorf("github: parse issue number from %q: %w", url, err)
 	}
-	return result.Number, nil
+	return num, nil
 }
 
 // runGH executes the gh CLI with the given arguments, scoped to the

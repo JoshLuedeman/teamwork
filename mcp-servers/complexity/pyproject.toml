@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "teamwork-mcp-complexity"
+version = "0.1.0"
+description = "MCP server for code complexity analysis using lizard"
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "lizard>=1.17.0"]
+
+[project.scripts]
+teamwork-mcp-complexity = "teamwork_mcp_complexity.server:main"

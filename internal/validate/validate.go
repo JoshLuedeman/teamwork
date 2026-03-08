@@ -308,6 +308,8 @@ var knownRoles = map[string]bool{
 	"lint-agent":         true,
 	"api-agent":          true,
 	"dba-agent":          true,
+	"product-owner":      true,
+	"qa-lead":            true,
 }
 
 // checkMCPServers validates the mcp_servers section of config.yaml, if present.

@@ -1,4 +1,4 @@
-# ADR-006: MCP Integration Strategy
+# ADR-007: MCP Integration Strategy
 
 **Status:** proposed
 

@@ -41,6 +41,7 @@ func Run(dir string) ([]Result, error) {
 	results = append(results, checkStateFiles(twDir)...)
 	results = append(results, checkHandoffFiles(twDir)...)
 	results = append(results, checkMemoryFiles(twDir)...)
+	results = append(results, checkMCPServers(twDir)...)
 
 	return results, nil
 }
@@ -286,6 +287,173 @@ func checkHandoffFiles(twDir string) []Result {
 
 		return nil
 	})
+
+	return results
+}
+
+// knownRoles enumerates the recognized Teamwork role names.
+var knownRoles = map[string]bool{
+	"planner":            true,
+	"architect":          true,
+	"coder":              true,
+	"tester":             true,
+	"reviewer":           true,
+	"security-auditor":   true,
+	"documenter":         true,
+	"orchestrator":       true,
+	"triager":            true,
+	"devops":             true,
+	"dependency-manager": true,
+	"refactorer":         true,
+	"lint-agent":         true,
+	"api-agent":          true,
+	"dba-agent":          true,
+}
+
+// checkMCPServers validates the mcp_servers section of config.yaml, if present.
+func checkMCPServers(twDir string) []Result {
+	var results []Result
+	cfgPath := filepath.Join(twDir, "config.yaml")
+	relPath := ".teamwork/config.yaml"
+
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		// config.yaml missing is handled by checkConfigExists; skip silently.
+		return results
+	}
+
+	var raw map[string]interface{}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		// Invalid YAML is handled by checkConfigExists; skip silently.
+		return results
+	}
+
+	mcpRaw, ok := raw["mcp_servers"]
+	if !ok {
+		// MCP servers section absent — optional, pass silently.
+		return results
+	}
+
+	servers, _ := mcpRaw.(map[string]interface{})
+	if servers == nil {
+		// Present but empty or null — nothing to validate.
+		return results
+	}
+
+	serverCount := 0
+	missingEnvCount := 0
+
+	for name, entry := range servers {
+		srv, _ := entry.(map[string]interface{})
+		if srv == nil {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "mcp_servers",
+				Passed:  false,
+				Message: fmt.Sprintf("mcp_servers.%s: invalid server entry", name),
+			})
+			continue
+		}
+
+		// description required
+		desc, _ := srv["description"].(string)
+		if desc == "" {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "mcp_servers",
+				Passed:  false,
+				Message: fmt.Sprintf("mcp_servers.%s: missing required field 'description'", name),
+			})
+			continue
+		}
+
+		// url XOR command
+		urlVal, _ := srv["url"].(string)
+		cmdVal, _ := srv["command"].(string)
+		hasURL := urlVal != ""
+		hasCmd := cmdVal != ""
+
+		if hasURL && hasCmd {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "mcp_servers",
+				Passed:  false,
+				Message: fmt.Sprintf("mcp_servers.%s: must have either 'url' or 'command', not both", name),
+			})
+			continue
+		}
+		if !hasURL && !hasCmd {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "mcp_servers",
+				Passed:  false,
+				Message: fmt.Sprintf("mcp_servers.%s: must have either 'url' or 'command'", name),
+			})
+			continue
+		}
+
+		// URL format
+		if hasURL && !strings.HasPrefix(urlVal, "http://") && !strings.HasPrefix(urlVal, "https://") {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "mcp_servers",
+				Passed:  false,
+				Message: fmt.Sprintf("mcp_servers.%s: url must start with http:// or https://", name),
+			})
+			continue
+		}
+
+		// roles validation
+		rolesRaw, _ := srv["roles"].([]interface{})
+		invalidRole := false
+		for _, r := range rolesRaw {
+			roleName, _ := r.(string)
+			if !knownRoles[roleName] {
+				results = append(results, Result{
+					Path:    relPath,
+					Check:   "mcp_servers",
+					Passed:  false,
+					Message: fmt.Sprintf("mcp_servers.%s: invalid role %q", name, roleName),
+				})
+				invalidRole = true
+				break
+			}
+		}
+		if invalidRole {
+			continue
+		}
+
+		// env var warnings
+		envVarsRaw, _ := srv["env_vars"].([]interface{})
+		for _, ev := range envVarsRaw {
+			envName, _ := ev.(string)
+			if envName != "" && os.Getenv(envName) == "" {
+				results = append(results, Result{
+					Path:    relPath,
+					Check:   "mcp_servers",
+					Passed:  true,
+					Message: fmt.Sprintf("mcp_servers.%s: WARN env var %s is not set", name, envName),
+				})
+				missingEnvCount++
+			}
+		}
+
+		serverCount++
+	}
+
+	// Summary result when all servers are valid
+	if serverCount > 0 {
+		msg := fmt.Sprintf("mcp_servers: %d servers configured", serverCount)
+		if missingEnvCount > 0 {
+			msg = fmt.Sprintf("mcp_servers: %d servers configured (%d env vars missing)", serverCount, missingEnvCount)
+		}
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "mcp_servers",
+			Passed:  true,
+			Message: msg,
+		})
+	}
 
 	return results
 }

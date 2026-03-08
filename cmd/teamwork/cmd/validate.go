@@ -18,6 +18,7 @@ var validateCmd = &cobra.Command{
 func init() {
 	validateCmd.Flags().Bool("json", false, "Output results as JSON array")
 	validateCmd.Flags().Bool("quiet", false, "Suppress passing checks")
+	validateCmd.Flags().Bool("ci", false, "Machine-readable output (PASS/FAIL/WARN per check, no colors)")
 	rootCmd.AddCommand(validateCmd)
 }
 
@@ -28,6 +29,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	jsonOut, _ := cmd.Flags().GetBool("json")
 	quiet, _ := cmd.Flags().GetBool("quiet")
+	ciOut, _ := cmd.Flags().GetBool("ci")
 
 	results, err := validate.Run(dir)
 	if err != nil {
@@ -44,11 +46,20 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if jsonOut {
+	switch {
+	case jsonOut:
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(results)
-	} else {
+	case ciOut:
+		for _, r := range results {
+			prefix := "PASS"
+			if !r.Passed {
+				prefix = "FAIL"
+			}
+			fmt.Fprintf(os.Stdout, "%-6s%s: %s\n", prefix, r.Check, r.Message)
+		}
+	default:
 		for _, r := range results {
 			if quiet && r.Passed {
 				continue

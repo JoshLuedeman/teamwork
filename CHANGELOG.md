@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+## [v1.1.0] — 2026-03-08
+
+### Added
+
+- **Phase 4: MCP Integration** — Full MCP server support for Teamwork agents
+  - **ADR-007 update** — Updated MCP integration strategy with 8 server definitions and role mappings (#89)
+  - **MCP config section** — Added `mcp_servers` config in `.teamwork/config.yaml` with 8 server entries; added `MCPServer` struct to Go config package (#91)
+  - **MCP agent tools** — Added `## MCP Tools` section to all 15 agent files with role-specific server assignments (#92)
+  - **MCP instructions** — Added MCP tools guidance to `copilot-instructions.md` (#90)
+  - **MCP setup guide** — Created `docs/mcp.md` with comprehensive setup, configuration, and role-to-server mapping (#93)
+  - **MCP validation** — Extended `teamwork validate` with MCP config checks: URL/command mutual exclusivity, valid roles, env var format (#94)
+  - **`teamwork mcp list`** — CLI command listing configured MCP servers with role filtering (#95)
+  - **`teamwork mcp config`** — CLI command generating MCP client configuration for VS Code and Claude Desktop (#95)
+  - **MCP README section** — Added MCP overview to project README (#96)
+- **5 custom Python MCP servers** in `mcp-servers/` — each with pyproject.toml, Dockerfile, README, and tests
+  - **teamwork-mcp-coverage** — Test coverage report analysis for lcov, Istanbul, and Go cover.out formats (30 tests) (#101)
+  - **teamwork-mcp-adr** — Architecture Decision Record search, creation, and management (24 tests) (#98)
+  - **teamwork-mcp-commits** — Conventional commit message generation and validation from diffs (70 tests) (#99)
+  - **teamwork-mcp-changelog** — Changelog generation and release notes using git-cliff (43 tests) (#100)
+  - **teamwork-mcp-complexity** — Code complexity analysis using lizard for 30+ languages (15 tests) (#97)
+  - **MCP servers config update** — Added all 5 servers to config.yaml, docs/mcp.md, agent files, and README (#102)
+- **Auto-create setup issue** — `teamwork update` now creates a GitHub issue assigned to Copilot when unfilled `<!-- CUSTOMIZE -->` placeholders are detected (#83)
+- **Release process documentation** — `docs/releasing.md` covering semver strategy, release checklist, CHANGELOG conventions, and dual-repo sync (#104)
+- **`make release` target** — Automated release process: tests, cross-compilation, CHANGELOG verification, git tag, GitHub Release (#103)
+- **`teamwork --version` flag** — Version embedded in binary via ldflags (#103)
+
 ## [v1.0.0] — 2026-03-08
 
 ### Added

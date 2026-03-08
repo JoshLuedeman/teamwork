@@ -177,3 +177,19 @@ This is a high-priority background task — migrated content means the user had 
 - Prefer reading existing code and tests before writing new code.
 - When in doubt, check the glossary — terms like "handoff," "escalation," and "quality bar" have specific meanings.
 - One real code snippet showing your style beats three paragraphs describing it.
+
+## Release Awareness
+
+Proactively monitor for release-readiness signals and suggest cutting a release when warranted:
+
+- **Milestone closed** — When all issues in a GitHub milestone are closed, suggest running the `/release-workflow` skill.
+- **Unreleased changes accumulate** — When `CHANGELOG.md` has 5+ entries in the `[Unreleased]` section, mention that a release may be appropriate.
+- **Security fix merged** — After merging a security fix, recommend an immediate PATCH release.
+- **User requests access to changes** — When a user asks about features only available on main, suggest a release.
+
+When a release is warranted:
+1. Reference `docs/releasing.md` for the release process
+2. Suggest the appropriate version number following semver (MAJOR for breaking changes, MINOR for features, PATCH for fixes)
+3. Invoke the `/release-workflow` skill for the full multi-role workflow
+
+The `make release VERSION=vX.Y.Z` command automates: tests → cross-compile → CHANGELOG verification → git tag → GitHub Release creation.

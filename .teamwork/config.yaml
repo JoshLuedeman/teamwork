@@ -121,6 +121,41 @@ mcp_servers:
     env_vars: [TF_TOKEN]
     install: "npx -y terraform-mcp-server@latest"
 
+  coverage:
+    description: "Test coverage report analysis — lcov, Istanbul, Go cover.out"
+    command: "uvx teamwork-mcp-coverage"
+    roles: [tester, reviewer, orchestrator]
+    env_vars: []
+    install: "pip install teamwork-mcp-coverage"
+
+  commits:
+    description: "Conventional commit message generation and validation from diffs"
+    command: "uvx teamwork-mcp-commits"
+    roles: [coder, reviewer, orchestrator]
+    env_vars: []
+    install: "pip install teamwork-mcp-commits"
+
+  adr:
+    description: "Architecture Decision Record search, creation, and management"
+    command: "uvx teamwork-mcp-adr"
+    roles: [architect, orchestrator, coder]
+    env_vars: []
+    install: "pip install teamwork-mcp-adr"
+
+  changelog:
+    description: "Changelog generation and release notes using git-cliff"
+    command: "uvx teamwork-mcp-changelog"
+    roles: [documenter, orchestrator, planner]
+    env_vars: []
+    install: "pip install teamwork-mcp-changelog"
+
+  complexity:
+    description: "Code complexity analysis — cyclomatic complexity for 30+ languages"
+    command: "uvx teamwork-mcp-complexity"
+    roles: [reviewer, tester, architect]
+    env_vars: []
+    install: "pip install teamwork-mcp-complexity"
+
 # Multi-repo coordination (hub-spoke model)
 # The repo where teamwork runs is the hub. Spoke repos are listed here.
 # repos:

@@ -56,7 +56,19 @@ Teamwork agents become significantly more capable when paired with MCP (Model Co
 
 See **[docs/mcp.md](docs/mcp.md)** for full setup instructions and client configuration.
 
-### Recommended servers
+### Teamwork MCP servers
+
+Five custom MCP servers are included in [`mcp-servers/`](mcp-servers/README.md), purpose-built for Teamwork workflows:
+
+| Server | Install | What it unlocks |
+|--------|---------|-----------------| 
+| [Coverage](mcp-servers/coverage/) | `pip install teamwork-mcp-coverage` | Coverage report analysis (lcov, Istanbul, Go) |
+| [Commits](mcp-servers/commits/) | `pip install teamwork-mcp-commits` | Conventional commit generation and validation |
+| [ADR](mcp-servers/adr/) | `pip install teamwork-mcp-adr` | Architecture Decision Record management |
+| [Changelog](mcp-servers/changelog/) | `pip install teamwork-mcp-changelog` | Changelog and release notes via git-cliff |
+| [Complexity](mcp-servers/complexity/) | `pip install teamwork-mcp-complexity` | Cyclomatic complexity analysis (30+ languages) |
+
+### Recommended third-party servers
 
 | Server | Install | What it unlocks |
 |--------|---------|-----------------| 

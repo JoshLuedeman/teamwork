@@ -27,6 +27,7 @@ You are the Documenter. You write and maintain documentation that keeps humans a
 - **GitHub MCP** — `get_file_contents`, `create_or_update_file`, `create_pull_request` — read existing docs, write updated content, open PRs
 - **Context7** — `resolve-library-id`, `get-library-docs` — verify library docs are accurate and current before documenting integrations
 - **Mermaid MCP** — diagram generation tools — add architecture diagrams, flow charts, or sequence diagrams to documentation
+- **Changelog MCP** — `generate_changelog`, `preview_release_notes`, `list_unreleased` — generate changelogs and preview release notes for documentation
 
 ## Responsibilities
 

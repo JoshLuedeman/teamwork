@@ -8,14 +8,14 @@ Configure MCP servers in `.teamwork/config.yaml` and agents automatically discov
 
 | Role | Servers |
 |------|---------|
-| Planner | GitHub MCP, Tavily |
-| Architect | GitHub MCP, Context7, Tavily, Mermaid, Terraform |
-| Coder | GitHub MCP, Context7, E2B, Semgrep |
-| Tester | GitHub MCP, E2B |
-| Reviewer | GitHub MCP, Semgrep, OSV |
+| Planner | GitHub MCP, Tavily, Changelog |
+| Architect | GitHub MCP, Context7, Tavily, Mermaid, Terraform, ADR, Complexity |
+| Coder | GitHub MCP, Context7, E2B, Semgrep, Commits, ADR |
+| Tester | GitHub MCP, E2B, Coverage, Complexity |
+| Reviewer | GitHub MCP, Semgrep, OSV, Coverage, Commits, Complexity |
 | Security Auditor | Semgrep, GitHub MCP, OSV, Tavily |
-| Documenter | GitHub MCP, Context7, Mermaid |
-| Orchestrator | GitHub MCP |
+| Documenter | GitHub MCP, Context7, Mermaid, Changelog |
+| Orchestrator | GitHub MCP, Coverage, Commits, ADR, Changelog |
 | Triager | GitHub MCP |
 | DevOps | GitHub MCP, Terraform |
 | Dependency Manager | GitHub MCP, OSV |
@@ -329,6 +329,186 @@ npx -y terraform-mcp-server@latest
 }
 ```
 
+### Coverage MCP (Teamwork)
+
+Test coverage report analysis. Parses lcov, Istanbul JSON, and Go `cover.out` reports to surface coverage gaps to agents.
+
+**Install:**
+
+```bash
+pip install teamwork-mcp-coverage
+```
+
+**Required env vars:** None
+
+**Claude Desktop config:**
+
+```json
+{
+  "coverage": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-coverage"]
+  }
+}
+```
+
+**VS Code config:**
+
+```json
+{
+  "coverage": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-coverage"]
+  }
+}
+```
+
+### Commits MCP (Teamwork)
+
+Conventional commit message generation and validation. Reads git diffs and produces structured, conventional-commit-compliant messages.
+
+**Install:**
+
+```bash
+pip install teamwork-mcp-commits
+```
+
+**Required env vars:** None
+
+**Claude Desktop config:**
+
+```json
+{
+  "commits": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-commits"]
+  }
+}
+```
+
+**VS Code config:**
+
+```json
+{
+  "commits": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-commits"]
+  }
+}
+```
+
+### ADR MCP (Teamwork)
+
+Architecture Decision Record search, creation, and management. Works with MADR-format markdown files in `docs/decisions/`.
+
+**Install:**
+
+```bash
+pip install teamwork-mcp-adr
+```
+
+**Required env vars:** None
+
+**Claude Desktop config:**
+
+```json
+{
+  "adr": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-adr"]
+  }
+}
+```
+
+**VS Code config:**
+
+```json
+{
+  "adr": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-adr"]
+  }
+}
+```
+
+### Changelog MCP (Teamwork)
+
+Changelog generation and release notes using git-cliff. Generates changelogs, previews release notes, lists unreleased commits, and suggests the next semantic version.
+
+**Install:**
+
+```bash
+pip install teamwork-mcp-changelog
+```
+
+**Required env vars:** None
+
+**Claude Desktop config:**
+
+```json
+{
+  "changelog": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-changelog"]
+  }
+}
+```
+
+**VS Code config:**
+
+```json
+{
+  "changelog": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-changelog"]
+  }
+}
+```
+
+### Complexity MCP (Teamwork)
+
+Code complexity analysis using the lizard static analysis library. Computes cyclomatic complexity for 30+ languages.
+
+**Install:**
+
+```bash
+pip install teamwork-mcp-complexity
+```
+
+**Required env vars:** None
+
+**Claude Desktop config:**
+
+```json
+{
+  "complexity": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-complexity"]
+  }
+}
+```
+
+**VS Code config:**
+
+```json
+{
+  "complexity": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["teamwork-mcp-complexity"]
+  }
+}
+```
+
 ## Full Client Configuration
 
 ### Claude Desktop
@@ -377,6 +557,31 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
       "command": "npx",
       "args": ["-y", "terraform-mcp-server@latest"],
       "env": { "TF_TOKEN": "${TF_TOKEN}" }
+    },
+    "coverage": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-coverage"]
+    },
+    "commits": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-commits"]
+    },
+    "adr": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-adr"]
+    },
+    "changelog": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-changelog"]
+    },
+    "complexity": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-complexity"]
     }
   }
 }
@@ -428,6 +633,31 @@ Add to `.vscode/mcp.json` in your project root:
       "command": "npx",
       "args": ["-y", "terraform-mcp-server@latest"],
       "env": { "TF_TOKEN": "${TF_TOKEN}" }
+    },
+    "coverage": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-coverage"]
+    },
+    "commits": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-commits"]
+    },
+    "adr": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-adr"]
+    },
+    "changelog": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-changelog"]
+    },
+    "complexity": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["teamwork-mcp-complexity"]
     }
   }
 }
@@ -456,6 +686,11 @@ Or run `teamwork mcp config --format vscode` to generate this automatically.
 | OSV | Unlimited | — |
 | Mermaid | Unlimited (runs locally) | — |
 | Terraform | Unlimited Registry lookups | HCP features, private registry |
+| Coverage (Teamwork) | Unlimited (runs locally) | — |
+| Commits (Teamwork) | Unlimited (runs locally) | — |
+| ADR (Teamwork) | Unlimited (runs locally) | — |
+| Changelog (Teamwork) | Unlimited (runs locally) | — |
+| Complexity (Teamwork) | Unlimited (runs locally) | — |
 
 ## Future MCP Servers
 

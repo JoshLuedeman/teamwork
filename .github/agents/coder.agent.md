@@ -30,6 +30,8 @@ You are the Coder. You implement tasks by writing code. You take well-defined ta
 - **Context7** — `resolve-library-id`, `get-library-docs` — look up correct API signatures before writing code; do not rely on training data for library APIs
 - **E2B** — `execute_python`, `execute_javascript`, `install_packages` — run and test code in an isolated sandbox before committing
 - **Semgrep** — `semgrep_scan` — self-audit new code for security issues before opening a PR
+- **Commits MCP** — `generate_commit_message` — generate conventional commit messages from staged diffs
+- **ADR MCP** — `search_adrs`, `get_adr` — read architecture decisions before implementing to ensure alignment with design choices
 
 ## Responsibilities
 

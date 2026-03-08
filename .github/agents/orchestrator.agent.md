@@ -22,6 +22,9 @@ You are the Orchestrator. You coordinate the workflow state machine — initiali
 
 ## MCP Tools
 - **GitHub MCP** — `list_issues`, `update_issue`, `create_issue`, `list_workflow_runs` — track work state, monitor CI, manage handoff artifacts
+- **Coverage MCP** — `load_coverage_report`, `check_thresholds` — verify coverage meets release readiness criteria before approving handoffs
+- **Commits MCP** — `generate_commit_message`, `validate_commit_message` — generate PR descriptions and validate commit message conventions
+- **Changelog MCP** — `generate_changelog`, `list_unreleased` — produce release notes and track unreleased changes across workflows
 
 ## Responsibilities
 

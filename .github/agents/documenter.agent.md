@@ -39,6 +39,8 @@ You are the Documenter. You write and maintain documentation that keeps humans a
 - Write inline documentation (comments, docstrings) for complex or non-obvious code
 - Ensure role files and workflow docs remain accurate as processes evolve
 - Review documentation for clarity, completeness, and correctness
+- Maintain `[Unreleased]` section in CHANGELOG.md — add entries for every merged PR following Keep a Changelog categories (Added, Changed, Deprecated, Removed, Fixed, Security)
+- During releases, finalize CHANGELOG.md by renaming `[Unreleased]` to `[vX.Y.Z] — YYYY-MM-DD` and adding a new empty `[Unreleased]` section
 
 ## Inputs
 

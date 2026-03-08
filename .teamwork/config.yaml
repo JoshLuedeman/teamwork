@@ -61,6 +61,66 @@ model_tiers:
 #   coder: "claude-opus-4.6"          # Upgrade coder when code quality is paramount
 #   documenter: "gpt-5-mini"          # Use a different provider for docs
 
+# MCP server definitions
+# Agents check this section to know which MCP tools are available.
+# Install only the servers your workflow needs.
+mcp_servers:
+  github:
+    description: "GitHub repos, PRs, issues, CI workflows, Dependabot alerts"
+    url: "https://api.githubcopilot.com/mcp/"
+    roles: [planner, architect, coder, tester, reviewer, security-auditor, documenter, orchestrator]
+    env_vars: [GH_TOKEN]
+    install: "gh extension install github/gh-mcp"
+
+  context7:
+    description: "Real-time library documentation — prevents API hallucination"
+    url: "https://mcp.context7.com/mcp"
+    roles: [architect, coder, documenter]
+    env_vars: []
+    install: "npx -y @upstash/context7-mcp"
+
+  semgrep:
+    description: "SAST security scanning — 5000+ rules across 30+ languages"
+    command: "uvx semgrep-mcp"
+    roles: [security-auditor, reviewer, coder]
+    env_vars: [SEMGREP_APP_TOKEN]
+    install: "pip install semgrep-mcp"
+
+  tavily:
+    description: "Web search and content extraction for research tasks"
+    url: "https://mcp.tavily.com/mcp/"
+    roles: [planner, architect, security-auditor]
+    env_vars: [TAVILY_API_KEY]
+    install: "npx -y tavily-mcp"
+
+  e2b:
+    description: "Cloud-sandboxed Python and JavaScript code execution"
+    command: "uvx e2b-mcp"
+    roles: [coder, tester]
+    env_vars: [E2B_API_KEY]
+    install: "pip install e2b-mcp"
+
+  osv:
+    description: "Open Source Vulnerability database — CVEs by package and version"
+    command: "uvx osv-mcp"
+    roles: [security-auditor, reviewer]
+    env_vars: []
+    install: "pip install osv-mcp"
+
+  mermaid:
+    description: "Architecture and flow diagram generation from text descriptions"
+    command: "npx -y mermaid-mcp"
+    roles: [architect, documenter]
+    env_vars: []
+    install: "npm install -g mermaid-mcp"
+
+  terraform:
+    description: "Terraform Registry lookups, provider docs, module search, HCP workspace management"
+    command: "npx -y terraform-mcp-server@latest"
+    roles: [devops, architect]
+    env_vars: [TF_TOKEN]
+    install: "npx -y terraform-mcp-server@latest"
+
 # Multi-repo coordination (hub-spoke model)
 # The repo where teamwork runs is the hub. Spoke repos are listed here.
 # repos:

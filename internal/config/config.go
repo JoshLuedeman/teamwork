@@ -12,12 +12,13 @@ import (
 
 // Config represents the top-level .teamwork/config.yaml structure.
 type Config struct {
-	Project      ProjectConfig      `yaml:"project"`
-	Roles        RolesConfig        `yaml:"roles"`
-	Workflows    WorkflowsConfig    `yaml:"workflows"`
-	QualityGates QualityGatesConfig `yaml:"quality_gates"`
-	Memory       MemoryConfig       `yaml:"memory"`
-	Repos        []RepoConfig       `yaml:"repos,omitempty"`
+	Project      ProjectConfig        `yaml:"project"`
+	Roles        RolesConfig          `yaml:"roles"`
+	Workflows    WorkflowsConfig      `yaml:"workflows"`
+	QualityGates QualityGatesConfig   `yaml:"quality_gates"`
+	Memory       MemoryConfig         `yaml:"memory"`
+	MCPServers   map[string]MCPServer `yaml:"mcp_servers"`
+	Repos        []RepoConfig         `yaml:"repos,omitempty"`
 }
 
 // ProjectConfig identifies the project.
@@ -31,6 +32,16 @@ type RepoConfig struct {
 	Name string `yaml:"name"` // Short identifier (e.g., "api", "frontend")
 	Path string `yaml:"path"` // Local filesystem path (relative or absolute)
 	Repo string `yaml:"repo"` // GitHub owner/repo slug
+}
+
+// MCPServer describes an MCP server that agents can use for tooling.
+type MCPServer struct {
+	Description string   `yaml:"description"`
+	URL         string   `yaml:"url,omitempty"`
+	Command     string   `yaml:"command,omitempty"`
+	Roles       []string `yaml:"roles"`
+	EnvVars     []string `yaml:"env_vars"`
+	Install     string   `yaml:"install"`
 }
 
 // RolesConfig defines which roles are active in the project.

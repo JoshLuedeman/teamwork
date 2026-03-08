@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/JoshLuedeman/teamwork/internal/config"
 	"github.com/JoshLuedeman/teamwork/internal/workflow"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,7 @@ var startCmd = &cobra.Command{
 
 func init() {
 	startCmd.Flags().IntP("issue", "i", 0, "GitHub issue number to link")
+	startCmd.Flags().Bool("dry-run", false, "Preview workflow steps without creating state files")
 	rootCmd.AddCommand(startCmd)
 }
 
@@ -40,6 +42,15 @@ func runStart(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	dryRun, err := cmd.Flags().GetBool("dry-run")
+	if err != nil {
+		return err
+	}
+
+	if dryRun {
+		return runDryRun(cmd, dir, wfType, goal)
+	}
+
 	issue, err := cmd.Flags().GetInt("issue")
 	if err != nil {
 		return err
@@ -55,15 +66,93 @@ func runStart(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Started workflow %s\n", wf.ID)
-	fmt.Printf("  Type:   %s\n", wf.Type)
-	fmt.Printf("  Goal:   %s\n", goal)
-	fmt.Printf("  Status: %s\n", wf.Status)
+	fmt.Fprintf(cmd.OutOrStdout(), "Started workflow %s\n", wf.ID)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Type:   %s\n", wf.Type)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Goal:   %s\n", goal)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Status: %s\n", wf.Status)
 	if issue > 0 {
-		fmt.Printf("  Issue:  #%d\n", issue)
+		fmt.Fprintf(cmd.OutOrStdout(), "  Issue:  #%d\n", issue)
 	}
 
 	return nil
+}
+
+// runDryRun previews the workflow steps without creating state files.
+func runDryRun(cmd *cobra.Command, dir, wfType, goal string) error {
+	steps, err := workflow.PreviewSteps(wfType)
+	if err != nil {
+		return err
+	}
+
+	cfg, err := config.Load(dir)
+	if err != nil {
+		return err
+	}
+
+	out := cmd.OutOrStdout()
+	fmt.Fprintf(out, "\nWorkflow: %s\n", wfType)
+	fmt.Fprintf(out, "Goal: %s\n", goal)
+	fmt.Fprintf(out, "Steps:\n")
+
+	var skipped []string
+	agentSteps := 0
+
+	for _, s := range steps {
+		if cfg.ShouldSkipStep(wfType, s.Role) {
+			skipped = append(skipped, s.Role)
+			fmt.Fprintf(out, "  %d. [%-17s] <- SKIPPED (configured in skip_steps)\n",
+				s.Number, titleCase(s.Role))
+			continue
+		}
+
+		tier := workflow.RoleTier(s.Role)
+		if tier != "" {
+			fmt.Fprintf(out, "  %d. [%-17s] %-40s (%s)\n",
+				s.Number, titleCase(s.Role), s.Action, tier)
+			agentSteps++
+		} else {
+			fmt.Fprintf(out, "  %d. [%-17s] %s\n",
+				s.Number, titleCase(s.Role), s.Action)
+		}
+	}
+
+	// Quality gates.
+	var gates []string
+	if cfg.QualityGates.HandoffComplete {
+		gates = append(gates, "handoff_complete")
+	}
+	if cfg.QualityGates.TestsPass {
+		gates = append(gates, "tests_pass")
+	}
+	if cfg.QualityGates.LintPass {
+		gates = append(gates, "lint_pass")
+	}
+	if len(gates) > 0 {
+		fmt.Fprintf(out, "\nQuality gates: %s\n", strings.Join(gates, ", "))
+	}
+
+	// Skipped steps.
+	if len(skipped) > 0 {
+		fmt.Fprintf(out, "Skipped steps: %s\n", strings.Join(skipped, ", "))
+	} else {
+		fmt.Fprintf(out, "Skipped steps: none\n")
+	}
+
+	fmt.Fprintf(out, "Total agent steps: %d\n", agentSteps)
+
+	return nil
+}
+
+// titleCase converts a kebab-case role name to Title Case for display.
+// e.g. "security-auditor" -> "Security Auditor"
+func titleCase(role string) string {
+	parts := strings.Split(role, "-")
+	for i, p := range parts {
+		if len(p) > 0 {
+			parts[i] = strings.ToUpper(p[:1]) + p[1:]
+		}
+	}
+	return strings.Join(parts, " ")
 }
 
 func isKnownType(t string) bool {

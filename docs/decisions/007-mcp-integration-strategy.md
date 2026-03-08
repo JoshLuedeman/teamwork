@@ -1,386 +1,328 @@
 # ADR-007: MCP Integration Strategy
 
-**Status:** proposed
+**Status:** accepted
 
 **Date:** 2026-03-03
 
 ## Context
 
-Teamwork defines 8 roles that AI agents fill during development workflows. Each role has distinct responsibilities — the Security Auditor scans for vulnerabilities, the Coder writes and tests code, the Documenter maintains docs, and so on. Today, agents filling these roles rely solely on the tools their host environment provides (file editing, terminal commands, web search). They have no structured way to access specialized external tools tailored to their role.
+Teamwork defines 8 core roles (plus 7 extended roles) that AI agents fill during development workflows. Each role has distinct responsibilities — the Security Auditor scans for vulnerabilities, the Coder writes and tests code, the Documenter maintains docs, and so on. Today, agents filling these roles rely solely on the tools their host environment provides (file editing, terminal commands, web search). They have no structured way to access specialized external tools tailored to their role.
 
-The Model Context Protocol (MCP) is a standard for connecting AI agents to external tool servers. MCP servers expose domain-specific capabilities (GitHub operations, static analysis, documentation lookup) that agents can invoke during their work. A growing ecosystem of actively maintained MCP servers exists for software development use cases.
+The Model Context Protocol (MCP) is a standard for connecting AI agents to external tool servers. MCP servers expose domain-specific capabilities (GitHub operations, static analysis, documentation lookup, web search, sandboxed execution, vulnerability databases, diagram generation, infrastructure management) that agents can invoke during their work. A growing ecosystem of actively maintained MCP servers exists for software development use cases.
 
 Phase 4 of the Teamwork roadmap adds MCP server integration so that:
 
 1. Projects can declare which MCP servers are available for agent use.
-2. Each role can specify which MCP servers benefit its work.
-3. Instruction files (`.github/copilot-instructions.md`) surface MCP configuration so agents discover available servers.
+2. Each role can specify which MCP servers benefit its work and which tools to call.
+3. Instruction files (`.github/copilot-instructions.md`) surface MCP guidance so agents discover available servers.
 4. The `teamwork` CLI can list, generate, and validate MCP configuration.
 
 Key constraints:
 
 - MCP server configuration must live in `.teamwork/config.yaml` alongside existing project settings (model tiers, roles, workflows). Adding a separate config file creates fragmentation.
-- Role files in `.github/agents/` are framework files managed by `teamwork install`/`teamwork update` (ADR-005). Role-to-MCP-server mappings should be part of these files so they update with the framework.
-- Different AI clients (Claude Code, Cursor, GitHub Copilot) each have their own MCP configuration format. Teamwork should not duplicate these — it should document which servers to configure, not replace client-specific config.
+- Agent files in `.github/agents/*.agent.md` are framework files managed by `teamwork install`/`teamwork update` (ADR-005). Role-to-MCP-server mappings should be part of these files so they update with the framework.
+- Different AI clients (Claude Desktop, VS Code, GitHub Copilot) each have their own MCP configuration format. The `teamwork mcp config` command generates paste-ready JSON for each client from the single config source.
 - MCP servers require different runtimes (Node.js, Python, Docker). Teamwork should recommend servers but cannot guarantee runtime availability.
 
 ## Decision
 
-We will add MCP server support to Teamwork across four layers: config schema, role references, instruction file surfacing, and CLI commands.
+We will add MCP server support to Teamwork across four layers: config schema, agent file references, instruction file surfacing, and CLI commands.
 
-### 1. MCP Server Configuration in `.teamwork/config.yaml`
+### 1. Server Selection Rationale
 
-Add a top-level `mcp_servers` key to `.teamwork/config.yaml`. Each entry defines a named MCP server with its launch configuration:
+We selected 8 MCP servers that cover the core capabilities needed by Teamwork's roles. Selection criteria:
+
+- **Actively maintained** — Regular commits, responsive maintainers, not abandoned
+- **Widely adopted** — Significant community usage, not experimental
+- **Free tier available** — Usable without paid subscriptions for basic workflows
+- **Role-relevant** — Each server maps to specific role responsibilities
+- **No overlap** — Each server fills a distinct capability gap
+
+The 8 selected servers:
+
+| Server | Package | What It Provides |
+|--------|---------|------------------|
+| GitHub MCP | `github/github-mcp-server` | GitHub repos, PRs, issues, CI workflows, Dependabot alerts |
+| Context7 | `upstash/context7` | Real-time library documentation — prevents API hallucination |
+| Semgrep | `semgrep/mcp` | SAST security scanning — 5000+ rules across 30+ languages |
+| Tavily | `tavily-ai/tavily-mcp` | Web search and content extraction for research tasks |
+| E2B | `e2b-dev/e2b-mcp` | Cloud-sandboxed Python and JavaScript code execution |
+| OSV | `StacklokLabs/osv-mcp` | Open Source Vulnerability database — CVEs by package and version |
+| Mermaid | `Narasimhaponnada/mermaid-mcp` | Architecture and flow diagram generation from text descriptions |
+| Terraform | `hashicorp/terraform-mcp-server` | Terraform Registry lookups, provider docs, module search, HCP workspace management |
+
+**What was not chosen and why:**
+
+| Server | Why Not Selected |
+|--------|------------------|
+| Playwright (`microsoft/playwright-mcp`) | Browser-specific, not universal enough for core set. Useful for web app testing but most Teamwork projects don't require browser automation. See nice-to-have issue #30. |
+| Sentry / Datadog | Paid services, project-specific APM configuration |
+| Atlassian / Linear | Not universal — teams use different project management tools |
+| SonarQube | Requires running server instance, complex setup |
+
+**Nice-to-have custom servers** for future consideration are tracked in issues #30–#34.
+
+### 2. Role-to-Server Mapping
+
+Each role benefits from a specific subset of MCP servers. This mapping drives the `## MCP Tools` sections in agent files and the `--role` filter in `teamwork mcp list`.
+
+| Role | GitHub | Context7 | Semgrep | Tavily | E2B | OSV | Mermaid | Terraform |
+|------|--------|----------|---------|--------|-----|-----|---------|-----------|
+| Planner | ✓ | — | — | ✓ | — | — | — | — |
+| Architect | ✓ | ✓ | — | ✓ | — | — | ✓ | ✓ |
+| Coder | ✓ | ✓ | ✓ | — | ✓ | — | — | — |
+| Tester | ✓ | — | — | — | ✓ | — | — | — |
+| Reviewer | ✓ | — | ✓ | — | — | ✓ | — | — |
+| Security Auditor | ✓ | — | ✓ | ✓ | — | ✓ | — | — |
+| Documenter | ✓ | ✓ | — | — | — | — | ✓ | — |
+| Orchestrator | ✓ | — | — | — | — | — | — | — |
+| Triager | ✓ | — | — | — | — | — | — | — |
+| DevOps | ✓ | — | — | — | — | — | — | ✓ |
+| Dependency Manager | ✓ | — | — | — | — | ✓ | — | — |
+| Refactorer | ✓ | — | ✓ | — | — | — | — | — |
+| Lint Agent | ✓ | — | ✓ | — | — | — | — | — |
+| API Agent | ✓ | ✓ | — | — | — | — | — | — |
+| DBA Agent | ✓ | ✓ | — | — | — | — | — | — |
+
+### 3. Config Schema Design
+
+Add a top-level `mcp_servers` key to `.teamwork/config.yaml`. Each entry defines a named MCP server with a simplified schema optimized for readability:
 
 ```yaml
 # MCP server definitions
-# These declare which MCP servers are available for agents in this project.
-# Agents reference these by name; actual client configuration (Claude, Cursor, etc.)
-# is managed separately per docs/mcp-setup.md.
+# Agents check this section to know which MCP tools are available.
+# Install only the servers your workflow needs.
 mcp_servers:
   github:
-    description: "GitHub repository operations — issues, PRs, code search, commits"
-    command: "npx"
-    args: ["-y", "@modelcontextprotocol/server-github"]
-    env:
-      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
-    required: true
-
-  semgrep:
-    description: "Static analysis and security scanning via Semgrep"
-    command: "uvx"
-    args: ["semgrep-mcp"]
-    env:
-      SEMGREP_APP_TOKEN: "${SEMGREP_APP_TOKEN}"
-    required: false
+    description: "GitHub repos, PRs, issues, CI workflows, Dependabot alerts"
+    url: "https://api.githubcopilot.com/mcp/"
+    roles: [planner, architect, coder, tester, reviewer, security-auditor, documenter, orchestrator]
+    env_vars: [GH_TOKEN]
+    install: "gh extension install github/gh-mcp"
 
   context7:
-    description: "Up-to-date library documentation lookup"
-    command: "npx"
-    args: ["-y", "@upstash/context7-mcp"]
-    env: {}
-    required: false
+    description: "Real-time library documentation — prevents API hallucination"
+    url: "https://mcp.context7.com/mcp"
+    roles: [architect, coder, documenter]
+    env_vars: []
+    install: "npx -y @upstash/context7-mcp"
 
-  playwright:
-    description: "Browser automation for E2E testing"
-    command: "npx"
-    args: ["@playwright/mcp@latest"]
-    env: {}
-    required: false
+  semgrep:
+    description: "SAST security scanning — 5000+ rules across 30+ languages"
+    command: "uvx semgrep-mcp"
+    roles: [security-auditor, reviewer, coder]
+    env_vars: [SEMGREP_APP_TOKEN]
+    install: "pip install semgrep-mcp"
+
+  tavily:
+    description: "Web search and content extraction for research tasks"
+    url: "https://mcp.tavily.com/mcp/"
+    roles: [planner, architect, security-auditor]
+    env_vars: [TAVILY_API_KEY]
+    install: "npx -y tavily-mcp"
+
+  e2b:
+    description: "Cloud-sandboxed Python and JavaScript code execution"
+    command: "uvx e2b-mcp"
+    roles: [coder, tester]
+    env_vars: [E2B_API_KEY]
+    install: "pip install e2b-mcp"
+
+  osv:
+    description: "Open Source Vulnerability database — CVEs by package and version"
+    command: "uvx osv-mcp"
+    roles: [security-auditor, reviewer]
+    env_vars: []
+    install: "pip install osv-mcp"
+
+  mermaid:
+    description: "Architecture and flow diagram generation from text descriptions"
+    command: "npx -y mermaid-mcp"
+    roles: [architect, documenter]
+    env_vars: []
+    install: "npm install -g mermaid-mcp"
 
   terraform:
-    description: "Terraform Registry lookups, provider docs, module search, and HCP Terraform workspace management"
-    command: "npx"
-    args: ["-y", "terraform-mcp-server@latest"]
-    env:
-      TF_TOKEN: "${TF_TOKEN}"
-    required: false
+    description: "Terraform Registry lookups, provider docs, module search, HCP workspace management"
+    command: "npx -y terraform-mcp-server@latest"
+    roles: [devops, architect]
+    env_vars: [TF_TOKEN]
+    install: "npx -y terraform-mcp-server@latest"
 ```
 
 **Field definitions:**
 
 | Field | Type | Required | Description |
-|---|---|---|---|
-| `description` | string | yes | Human-readable description of what the server provides. Included in instruction file output. |
-| `command` | string | yes | Executable to launch the server (`npx`, `uvx`, `node`, `docker`, etc.). |
-| `args` | string[] | yes | Arguments passed to the command. |
-| `env` | map[string]string | no | Environment variables for the server process. Values starting with `$` or `${...}` reference the host environment. |
-| `required` | bool | no | If `true`, `teamwork validate` reports a warning when the server's runtime is not available. Default: `false`. |
-| `url` | string | no | For remote/hosted MCP servers. Mutually exclusive with `command`. |
-| `headers` | map[string]string | no | HTTP headers for remote servers. Only valid when `url` is set. |
+|-------|------|----------|-------------|
+| `description` | string | yes | One-line purpose of the server |
+| `url` | string | one of url/command | For remote/hosted MCP servers (HTTP type) |
+| `command` | string | one of url/command | For local MCP servers that run as a subprocess (stdio type). Mutually exclusive with `url`. |
+| `roles` | string[] | yes | List of Teamwork role names that use this server |
+| `env_vars` | string[] | yes | Required environment variable names (can be empty list) |
+| `install` | string | yes | One-liner install command for the user |
 
-Remote servers (hosted endpoints) use `url` instead of `command`:
+**Design choices:**
 
-```yaml
-mcp_servers:
-  semgrep-hosted:
-    description: "Semgrep hosted scanning service"
-    url: "https://mcp.semgrep.ai/mcp"
-    headers:
-      SEMGREP_APP_TOKEN: "${SEMGREP_APP_TOKEN}"
-    required: false
-```
+- **`url` vs `command`**: Remote servers use `url` (translate to MCP `http` type); local servers use `command` (translate to MCP `stdio` type). These are mutually exclusive.
+- **`roles` list**: Enables `teamwork mcp list --role coder` filtering and drives agent file MCP Tools sections.
+- **`env_vars`**: Simple list of names, not values. `teamwork mcp list` checks `os.Getenv()` to show status. Values are never stored in config.
+- **`install`**: Tells users how to install; `teamwork` never installs servers itself.
 
-### 2. Role References to MCP Servers
+### 4. Agent File MCP Tools Sections
 
-Each agent file in `.github/agents/` will include a new `## MCP Servers` section listing which MCP servers benefit that agent. This section is informational — it tells agents which servers to look for, not which are guaranteed to be configured.
-
-Format (added after the `## Model Requirements` section in each role file):
+Each agent file in `.github/agents/*.agent.md` includes a `## MCP Tools` section after `## Model Requirements`. Unlike the ADR's earlier concept of a priority table, the Phase 4 implementation specifies which tools to call from each server:
 
 ```markdown
-## MCP Servers
-
-The following MCP servers enhance this role's capabilities when available:
-
-| Server | Purpose | Priority |
-|---|---|---|
-| github | Read issues, PRs, commits, and code across repos | recommended |
-| context7 | Look up current library documentation | optional |
+## MCP Tools
+- **GitHub MCP** — `search_code`, `get_file_contents` — understand codebase structure
+- **Context7** — `resolve-library-id`, `get-library-docs` — look up library documentation
 ```
 
-**Priority levels:**
+This is prescriptive — it tells agents exactly which MCP tools to use for their role's tasks, not just which servers are available. See issue #22 for the complete per-role specifications.
 
-- **recommended** — The server significantly improves the role's effectiveness. Agents should check if it is available and use it when configured.
-- **optional** — The server is useful but not essential. The role functions well without it.
+### 5. Instruction File Surfacing
 
-Role files do not contain server launch configuration (that lives in `config.yaml`). They reference servers by name only.
+The instruction file (`.github/copilot-instructions.md`) includes an `## MCP Tools` section that tells agents:
 
-**Role-to-server mapping:**
+1. Check `.teamwork/config.yaml` for available servers
+2. Check their agent file for which tools to use
+3. Prefer MCP tools over improvised alternatives (e.g., GitHub MCP over `gh` CLI in bash, Context7 over training memory, Semgrep MCP over manual grep)
+4. Fall back gracefully if a server is unavailable
+5. Never install MCP servers — that's the user's responsibility
 
-| Role | github | semgrep | context7 | playwright | terraform |
-|---|---|---|---|---|---|
-| Planner | recommended | — | optional | — | — |
-| Architect | recommended | — | optional | — | optional |
-| Coder | recommended | — | recommended | optional | optional |
-| Tester | recommended | — | optional | recommended | — |
-| Reviewer | recommended | optional | — | — | — |
-| Security Auditor | recommended | recommended | — | — | — |
-| Documenter | recommended | — | recommended | — | — |
-| Orchestrator | recommended | — | — | — | — |
-| DevOps | recommended | — | — | — | recommended |
+### 6. The `teamwork mcp` CLI Command
 
-### 3. Instruction File Surfacing
-
-The instruction file (`.github/copilot-instructions.md`) will include a section that tells agents how to discover MCP server configuration. This section is part of the framework files maintained by `teamwork install`/`teamwork update`.
-
-Add the following section to the instruction file:
-
-```markdown
-## MCP Servers
-
-If your environment has MCP servers configured, use them to enhance your work.
-Run `teamwork mcp list` to see which servers are defined for this project.
-Check your agent file's "MCP Servers" section for which servers benefit your role.
-
-Common servers:
-- **github** — Repository operations (issues, PRs, code search). Available to all roles.
-- **semgrep** — Static analysis and security scanning. Primary for security-auditor.
-- **context7** — Up-to-date library documentation. Useful for coder and documenter.
-- **playwright** — Browser automation. Useful for tester.
-```
-
-This section is deliberately brief. It points agents to `teamwork mcp list` for the authoritative list rather than duplicating config. The instruction file is a framework file — it cannot contain project-specific MCP server lists because those vary per project.
-
-### 4. The `teamwork mcp` CLI Command
-
-Add a `teamwork mcp` command group with three subcommands:
+Add a `teamwork mcp` command group with two subcommands:
 
 **`teamwork mcp list`**
 
-```
-Usage: teamwork mcp list [flags]
+Reads `mcp_servers` from config and displays a table with server name, roles, env var status (✓ set / ✗ missing), and description.
 
-Lists all MCP servers defined in .teamwork/config.yaml.
-
-Flags:
-  --role string   Filter to servers relevant to a specific role
-  --json          Output as JSON
-```
-
-Behavior:
-1. Read `mcp_servers` from `.teamwork/config.yaml`.
-2. If `--role` is set, cross-reference with the role's MCP server mapping and filter.
-3. Print each server's name, description, command/url, and required status.
-4. Exit 0 on success, 2 if config is unreadable.
-
-Example output:
-
-```
-MCP Servers (3 configured):
-
-  github (required)
-    GitHub repository operations — issues, PRs, code search, commits
-    Command: npx -y @modelcontextprotocol/server-github
-
-  semgrep
-    Static analysis and security scanning via Semgrep
-    Command: uvx semgrep-mcp
-
-  context7
-    Up-to-date library documentation lookup
-    Command: npx -y @upstash/context7-mcp
-```
+Flags: `--role` (filter by role), `--json` (JSON output)
 
 **`teamwork mcp config`**
 
-```
-Usage: teamwork mcp config [flags]
+Generates paste-ready JSON configuration for AI clients. Transforms `url` servers to `http` type and `command` servers to `stdio` type.
 
-Generates MCP server configuration snippets for specific AI clients.
+Flags: `--format` (claude-desktop or vscode), `--only-ready` (exclude servers with missing env vars)
 
-Flags:
-  --client string   Target client: claude, cursor, copilot (required)
-  --role string     Filter to servers relevant to a specific role
-```
+### 7. Integration with `teamwork validate`
 
-Behavior:
-1. Read `mcp_servers` from `.teamwork/config.yaml`.
-2. Transform each server entry into the target client's configuration format.
-3. Print the generated config to stdout.
-4. Exit 0 on success, 1 on error.
+The existing `teamwork validate` command (ADR-004) is extended with MCP config checks:
 
-Example for `--client claude`:
+- **Schema validation**: description present, url XOR command, valid URL format, known role names
+- **Env var warnings**: Missing env vars produce warnings (not failures) — MCP is optional
+- **Silent pass**: If `mcp_servers` section is absent, pass silently
 
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
-    "semgrep": {
-      "command": "uvx",
-      "args": ["semgrep-mcp"],
-      "env": {
-        "SEMGREP_APP_TOKEN": "${SEMGREP_APP_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-**`teamwork mcp validate`**
-
-```
-Usage: teamwork mcp validate [flags]
-
-Validates MCP server configuration in .teamwork/config.yaml.
-
-Flags:
-  --json    Output as JSON
-```
-
-Behavior:
-1. Parse `mcp_servers` from config.
-2. For each server, check:
-   - Required fields present (`description`, and either `command`+`args` or `url`).
-   - `command` and `url` are not both set (mutually exclusive).
-   - If `required: true`, check that the command is available on `$PATH` (using `exec.LookPath`).
-   - Environment variable references (`${VAR}`) in `env` resolve to non-empty values (warning, not error).
-3. Print results in the same format as `teamwork validate` (✓/✗ lines, `--json` for structured output).
-4. Exit 0 if all checks pass, 1 if any fail, 2 if config is unreadable.
-
-### 5. Integration with `teamwork validate`
-
-The existing `teamwork validate` command (ADR-004) will be extended to include MCP validation checks:
-
-- **MCP config parses** — If `mcp_servers` key exists, each entry must have the required fields.
-- **MCP required servers available** — For each server with `required: true`, check that the command is on `$PATH`.
-
-These checks are non-fatal — MCP misconfiguration should produce warnings, not prevent other validation from running. This matches the continue-on-error design from ADR-004.
-
-### 6. Recommended MCP Servers
-
-The following MCP servers are recommended as defaults for new Teamwork projects. These are actively maintained, widely adopted, and cover the core needs of the 8 roles.
+### 8. Recommended Server Details
 
 **GitHub MCP Server** — `github/github-mcp-server`
 
 | Field | Value |
-|---|---|
+|-------|-------|
 | Repository | https://github.com/github/github-mcp-server |
 | Maintainer | GitHub (official) |
-| Runtime | Node.js 18+ |
-| Install | `npx -y @modelcontextprotocol/server-github` |
-| Auth | `GITHUB_PERSONAL_ACCESS_TOKEN` (required) |
+| Install | `gh extension install github/gh-mcp` |
+| Auth | `GH_TOKEN` (required) |
 | Roles | All roles |
+| Free tier | Unlimited (within GitHub API rate limits) |
 
-Provides: file contents, commit history, issue and PR management, code search, branch operations. Every role benefits from GitHub access — planners read issues, coders search code, reviewers read PRs, orchestrators track workflow state.
-
-**Semgrep MCP Server** — `semgrep/mcp`
-
-| Field | Value |
-|---|---|
-| Repository | https://github.com/semgrep/mcp |
-| Maintainer | Semgrep |
-| Runtime | Python 3.10+ (via `uvx`) or Docker |
-| Install | `uvx semgrep-mcp` |
-| Auth | `SEMGREP_APP_TOKEN` (optional, enables Pro rules) |
-| Hosted | `https://mcp.semgrep.ai/mcp` (no auth for public scanning) |
-| Roles | Security Auditor (recommended), Reviewer (optional) |
-
-Provides: static code analysis, security scanning, custom rule execution, AST inspection. Primary tool for the Security Auditor role. Reviewers benefit from automated security checks during PR review.
-
-**Context7 MCP Server** — `upstash/context7`
+**Context7** — `upstash/context7`
 
 | Field | Value |
-|---|---|
+|-------|-------|
 | Repository | https://github.com/upstash/context7 |
 | Maintainer | Upstash |
-| Runtime | Node.js 18+ |
 | Install | `npx -y @upstash/context7-mcp` |
-| Auth | None required (API key optional for higher rate limits) |
-| Roles | Coder (recommended), Documenter (recommended), Planner (optional), Architect (optional) |
-
-Provides: current, version-specific documentation for libraries and frameworks. Prevents agents from using deprecated APIs or hallucinating function signatures. Valuable for any role that references external library documentation.
-
-**Playwright MCP Server** — `microsoft/playwright-mcp`
-
-| Field | Value |
-|---|---|
-| Repository | https://github.com/microsoft/playwright-mcp |
-| Maintainer | Microsoft |
-| Runtime | Node.js 18+ |
-| Install | `npx @playwright/mcp@latest` |
 | Auth | None required |
-| Roles | Tester (recommended), Coder (optional) |
+| Roles | Architect, Coder, Documenter |
+| Free tier | Unlimited |
 
-Provides: browser automation via accessibility tree snapshots, page navigation, element interaction, screenshot capture. Enables AI-driven E2E test authoring and debugging. Primary tool for the Tester role when working on web applications.
-
-**Terraform MCP Server** — `hashicorp/terraform-mcp-server`
+**Semgrep** — `semgrep/mcp`
 
 | Field | Value |
-|---|---|
+|-------|-------|
+| Repository | https://github.com/semgrep/mcp |
+| Maintainer | Semgrep |
+| Install | `pip install semgrep-mcp` or `uvx semgrep-mcp` |
+| Auth | `SEMGREP_APP_TOKEN` (optional, enables Pro rules) |
+| Roles | Security Auditor, Reviewer, Coder |
+| Free tier | Unlimited local scans; app token needed for cloud dashboard |
+
+**Tavily** — `tavily-ai/tavily-mcp`
+
+| Field | Value |
+|-------|-------|
+| Repository | https://github.com/tavily-ai/tavily-mcp |
+| Maintainer | Tavily AI |
+| Install | `npx -y tavily-mcp` |
+| Auth | `TAVILY_API_KEY` (required) |
+| Roles | Planner, Architect, Security Auditor |
+| Free tier | 1,000 searches/month |
+
+**E2B** — `e2b-dev/e2b-mcp`
+
+| Field | Value |
+|-------|-------|
+| Repository | https://github.com/e2b-dev/e2b-mcp |
+| Maintainer | E2B |
+| Install | `pip install e2b-mcp` or `uvx e2b-mcp` |
+| Auth | `E2B_API_KEY` (required) |
+| Roles | Coder, Tester |
+| Free tier | 100 hours/month sandbox time |
+
+**OSV** — `StacklokLabs/osv-mcp`
+
+| Field | Value |
+|-------|-------|
+| Repository | https://github.com/StacklokLabs/osv-mcp |
+| Maintainer | Stacklok |
+| Install | `pip install osv-mcp` or `uvx osv-mcp` |
+| Auth | None required |
+| Roles | Security Auditor, Reviewer |
+| Free tier | Unlimited (uses Google's OSV.dev API) |
+
+**Mermaid MCP** — `Narasimhaponnada/mermaid-mcp`
+
+| Field | Value |
+|-------|-------|
+| Repository | https://github.com/Narasimhaponnada/mermaid-mcp |
+| Maintainer | Community |
+| Install | `npm install -g mermaid-mcp` |
+| Auth | None required |
+| Roles | Architect, Documenter |
+| Free tier | Unlimited (runs locally) |
+
+**Terraform MCP** — `hashicorp/terraform-mcp-server`
+
+| Field | Value |
+|-------|-------|
 | Repository | https://github.com/hashicorp/terraform-mcp-server |
 | Maintainer | HashiCorp (official) |
-| Runtime | Node.js 18+ or Docker |
 | Install | `npx -y terraform-mcp-server@latest` |
-| Docker | `docker run -i --rm hashicorp/terraform-mcp-server` |
-| Auth | `TF_TOKEN` (optional, required for HCP Terraform/Enterprise features and private registry) |
-| Roles | DevOps (recommended), Architect (optional), Coder (optional) |
-
-Provides: Terraform Registry lookups (providers, modules, Sentinel policies), provider capability discovery, module version details, and HCP Terraform workspace management (list orgs/projects/workspaces, manage variables and tags, run management). Enables agents to generate accurate, up-to-date Terraform configurations using real provider schemas rather than potentially outdated training data. Primary tool for the DevOps role when working with infrastructure-as-code. Architects benefit from provider and module discovery during design. Coders benefit when writing or modifying Terraform configurations.
-
-### 7. What the Coder Needs to Implement
-
-1. **Update `internal/config/config.go`** — Add `MCPServers map[string]MCPServer` field to the `Config` struct. Define `MCPServer` struct with fields: `Description`, `Command`, `Args`, `Env`, `Required`, `URL`, `Headers`.
-
-2. **Create `cmd/teamwork/cmd/mcp.go`** — Parent cobra command for the `mcp` command group. Subcommands: `list`, `config`, `validate`.
-
-3. **Create `cmd/teamwork/cmd/mcp_list.go`** — Implements `teamwork mcp list`. Flags: `--role`, `--json`.
-
-4. **Create `cmd/teamwork/cmd/mcp_config.go`** — Implements `teamwork mcp config`. Flags: `--client`, `--role`.
-
-5. **Create `cmd/teamwork/cmd/mcp_validate.go`** — Implements `teamwork mcp validate`. Flags: `--json`.
-
-6. **Update `internal/validate/validate.go`** — Add MCP validation checks to the existing `Run` function.
-
-7. **Update agent files** — Add `## MCP Servers` section to each of the agent files in `.github/agents/`.
-
-8. **Update instruction file** — Add the `## MCP Servers` section to `.github/copilot-instructions.md`.
-
-9. **Update `docs/cli.md`** — Add `teamwork mcp` section documenting subcommands, flags, and examples.
+| Auth | `TF_TOKEN` (optional, required for HCP Terraform/Enterprise and private registry) |
+| Roles | DevOps, Architect |
+| Free tier | Unlimited Registry lookups; HCP features require HCP account |
 
 ## Consequences
 
 - **Positive:** Projects get a single, declarative place to define MCP server availability. Agents filling any role can discover which servers are configured and use them to enhance their work.
-- **Positive:** Role files explicitly document which MCP servers are relevant, reducing trial-and-error by agents. A Security Auditor knows to look for Semgrep; a Coder knows to look for Context7.
-- **Positive:** The `teamwork mcp config` command eliminates manual translation between Teamwork's config format and client-specific formats (Claude, Cursor, Copilot). Users configure once in `.teamwork/config.yaml` and generate client configs.
-- **Positive:** Validation catches misconfigurations (missing fields, unavailable runtimes, unresolved env vars) before agents encounter them at runtime.
-- **Negative:** The `mcp_servers` config schema is a Teamwork-specific abstraction over client-specific formats. If a client adds MCP features that don't map to this schema (e.g., client-specific auth flows), users must configure those outside Teamwork.
-- **Negative:** Runtime availability checking (`exec.LookPath`) is best-effort. A command may be on `$PATH` but fail to start (wrong version, missing dependencies). Teamwork validates presence, not functionality.
-- **Negative:** MCP server recommendations will become outdated as the ecosystem evolves. The recommended servers list in this ADR and in default config will need periodic review.
-- **Neutral:** Teamwork does not manage MCP server installation or lifecycle. It documents what's available and validates configuration, but `npm install`, `pip install`, and runtime setup remain the user's responsibility.
+- **Positive:** Agent files explicitly document which MCP tools to call, reducing trial-and-error. A Security Auditor knows to use `semgrep_scan`; a Coder knows to use `resolve-library-id` from Context7.
+- **Positive:** The `teamwork mcp config` command generates paste-ready JSON for Claude Desktop and VS Code, eliminating manual translation from the single config source.
+- **Positive:** Validation catches misconfigurations (missing fields, both url and command, invalid roles, unresolved env vars) before agents encounter them at runtime.
+- **Positive:** 8 servers cover the full spectrum of development tasks — from code search to security scanning to infrastructure provisioning — without requiring paid subscriptions for basic use.
+- **Negative:** The `mcp_servers` config schema is a Teamwork-specific abstraction. If a client adds MCP features that don't map to this schema, users must configure those outside Teamwork.
+- **Negative:** MCP server recommendations will become outdated as the ecosystem evolves. The recommended servers list needs periodic review.
+- **Neutral:** Teamwork does not manage MCP server installation or lifecycle. It documents, configures, and validates — but runtime setup remains the user's responsibility.
 
 ## Alternatives Considered
 
 | Alternative | Why It Was Rejected |
-|---|---|
-| Separate `.teamwork/mcp.yaml` config file | Fragments configuration. Users already manage `.teamwork/config.yaml` for roles, model tiers, and workflows. MCP servers are another dimension of the same orchestration config. A single file keeps everything discoverable. |
-| Store MCP config directly in instruction file (`.github/copilot-instructions.md`) | Instruction file is a framework file updated by `teamwork update`. Project-specific MCP server lists would be overwritten on update. Config belongs in `.teamwork/config.yaml` which is a starter file (never overwritten). |
-| Auto-install MCP server runtimes | Out of scope. Runtime management (Node.js, Python, Docker) is a system-level concern. Teamwork is a development template, not a package manager. Users install runtimes; Teamwork validates they're available. |
-| Embed MCP server configs in agent files | Agent files are framework files, not project-specific. Different projects need different MCP servers. The agent files should say "I benefit from server X" (informational), not "server X is at this command" (configuration). |
-| Skip the `teamwork mcp config` command and let users manually configure each client | Manual configuration is error-prone and tedious when multiple MCP servers and multiple clients are involved. The `config` command generates correct snippets from a single source of truth. Low implementation cost, high user value. |
-| Use only remote/hosted MCP servers (no local command support) | Many MCP servers are local-only or work better locally (filesystem access, faster response). The schema must support both local (`command`+`args`) and remote (`url`+`headers`) servers. |
+|-------------|---------------------|
+| Separate `.teamwork/mcp.yaml` config file | Fragments configuration. Users already manage `.teamwork/config.yaml` for roles, model tiers, and workflows. MCP servers are another dimension of the same config. |
+| Store MCP config in instruction file | Instruction file is a framework file updated by `teamwork update`. Project-specific MCP server lists would be overwritten. Config belongs in `.teamwork/config.yaml` (starter file, never overwritten). |
+| Auto-install MCP server runtimes | Out of scope. Runtime management (Node.js, Python, Docker) is a system-level concern. Teamwork is a development template, not a package manager. |
+| Embed MCP server launch configs in agent files | Agent files are framework files. Different projects need different servers. Agent files say "use these tools" (prescriptive), not "launch this server" (configuration). |
+| Skip `teamwork mcp config` command | Manual configuration is error-prone with 8 servers and multiple clients. The `config` command generates correct snippets from a single source of truth. |
+| Use only remote/hosted MCP servers | Many servers are local-only or work better locally (filesystem access, faster response). Must support both `url` (remote) and `command` (local). |
+| Include 5 servers (original proposal) | Insufficient coverage. Adding Tavily (web research), E2B (sandboxed execution), OSV (vulnerability data), and Mermaid (diagrams) fills critical gaps for Planner, Tester, and Security Auditor roles. Terraform was retained from the original for infrastructure-as-code support. |

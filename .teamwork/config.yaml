@@ -19,7 +19,7 @@ roles:
     - security-auditor
     - documenter
     - orchestrator
-  optional: []                      # Add: triager, devops, dependency-manager, refactorer
+  optional: []                      # Add: triager, devops, dependency-manager, refactorer, product-owner, qa-lead
 
 # Workflow customizations
 workflows:

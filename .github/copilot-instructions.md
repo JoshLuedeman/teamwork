@@ -101,6 +101,25 @@ After selecting your agent, check its **Model Requirements** section for the rec
 
 See `docs/role-selector.md` for the full tier-to-agent mapping table.
 
+## MCP Tools
+
+When MCP servers are configured, prefer them over improvised shell workarounds. Before starting a task:
+
+1. **Check `.teamwork/config.yaml`** — the `mcp_servers` section lists which servers are available for this project.
+2. **Check your agent file** — `.github/agents/*.agent.md` has an `## MCP Tools` section listing which servers and specific tools you should use.
+3. **Use MCP tools first** for these tasks:
+   - Searching GitHub (issues, PRs, code) → GitHub MCP, not `gh` CLI in bash
+   - Looking up library APIs → Context7, not training memory
+   - Security scanning → Semgrep MCP, not manual grep patterns
+   - Web research → Tavily, not asking the user to look it up
+   - Running untrusted or experimental code → E2B sandbox, not local shell
+   - CVE/vulnerability lookup → OSV MCP, not web search
+   - Generating diagrams → Mermaid MCP, not ASCII art
+   - Infrastructure provisioning → Terraform MCP, not manual HCL
+
+4. **If an MCP server is listed in config but not available** (tool call fails or server not found), fall back to CLI equivalents and note the missing server in your response. Do not block on it.
+5. **Never install MCP servers yourself** — they are configured by the user. If a needed server is not available, surface that as a recommendation.
+
 ## Protocol Integration
 
 When working in a workflow, integrate with the `.teamwork/` protocol system:

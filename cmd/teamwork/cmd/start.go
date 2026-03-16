@@ -32,14 +32,18 @@ func runStart(cmd *cobra.Command, args []string) error {
 	wfType := args[0]
 	goal := strings.Join(args[1:], " ")
 
-	if !isKnownType(wfType) {
-		return fmt.Errorf("unknown workflow type %q — must be one of: %s",
-			wfType, strings.Join(knownWorkflowTypes, ", "))
-	}
-
 	dir, err := cmd.Flags().GetString("dir")
 	if err != nil {
 		return err
+	}
+
+	// Check built-in types first; if not found, check custom workflows in config.
+	if !isKnownType(wfType) {
+		cfg, cfgErr := config.Load(dir)
+		if cfgErr != nil || !cfg.HasCustomWorkflow(wfType) {
+			return fmt.Errorf("unknown workflow type %q — must be one of: %s (or define a custom workflow in config)",
+				wfType, strings.Join(knownWorkflowTypes, ", "))
+		}
 	}
 
 	dryRun, err := cmd.Flags().GetBool("dry-run")
@@ -79,12 +83,12 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 // runDryRun previews the workflow steps without creating state files.
 func runDryRun(cmd *cobra.Command, dir, wfType, goal string) error {
-	steps, err := workflow.PreviewSteps(wfType)
+	cfg, err := config.Load(dir)
 	if err != nil {
 		return err
 	}
 
-	cfg, err := config.Load(dir)
+	steps, err := workflow.PreviewStepsWithConfig(cfg, wfType)
 	if err != nil {
 		return err
 	}

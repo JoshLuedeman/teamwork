@@ -18,7 +18,19 @@ type Config struct {
 	QualityGates QualityGatesConfig   `yaml:"quality_gates"`
 	Memory       MemoryConfig         `yaml:"memory"`
 	MCPServers   map[string]MCPServer `yaml:"mcp_servers"`
-	Repos        []RepoConfig         `yaml:"repos,omitempty"`
+	Repos           []RepoConfig              `yaml:"repos,omitempty"`
+	CustomWorkflows map[string]CustomWorkflow `yaml:"custom_workflows,omitempty"`
+}
+
+// CustomWorkflow describes a user-defined workflow with a custom step sequence.
+type CustomWorkflow struct {
+	Steps []CustomStep `yaml:"steps"`
+}
+
+// CustomStep describes a single step in a custom workflow definition.
+type CustomStep struct {
+	Role        string `yaml:"role"`
+	Description string `yaml:"description"`
 }
 
 // ProjectConfig identifies the project.
@@ -185,4 +197,14 @@ func (c *Config) GetRepo(name string) *RepoConfig {
 		}
 	}
 	return nil
+}
+
+// HasCustomWorkflow reports whether a custom workflow with the given name
+// is defined in the config.
+func (c *Config) HasCustomWorkflow(name string) bool {
+	if c.CustomWorkflows == nil {
+		return false
+	}
+	_, ok := c.CustomWorkflows[name]
+	return ok
 }

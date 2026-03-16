@@ -1,6 +1,7 @@
 package validate_test
 
 import (
+	"strings"
 	"os"
 	"path/filepath"
 	"testing"
@@ -824,6 +825,14 @@ func filterAgentResults(results []validate.Result) []validate.Result {
 	return out
 }
 
+func filterCustomWorkflowResults(results []validate.Result) []validate.Result {
+	var out []validate.Result
+	for _, r := range results {
+		if r.Check == "custom_workflows" { out = append(out, r) }
+	}
+	return out
+}
+
 func TestAgentFile_ValidFile(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
@@ -1133,4 +1142,74 @@ func TestAgentFile_AllValidTiers(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRun_ValidCustomWorkflows(t *testing.T) {
+	dir := t.TempDir()
+	twDir := filepath.Join(dir, ".teamwork")
+	if err := os.MkdirAll(twDir, 0o755); err != nil { t.Fatal(err) }
+	cfg := "model:\n  provider: openai\n  name: gpt-4\ncustom_workflows:\n  data-pipeline:\n    steps:\n      - role: planner\n        description: Design\n      - role: coder\n        description: Build\n"
+	if err := os.WriteFile(filepath.Join(twDir, "config.yaml"), []byte(cfg), 0o644); err != nil { t.Fatal(err) }
+	results, _ := validate.Run(dir)
+	cwResults := filterCustomWorkflowResults(results)
+	if len(cwResults) == 0 { t.Fatal("expected results") }
+	for _, r := range cwResults {
+		if !r.Passed { t.Errorf("expected pass: %s", r.Message) }
+	}
+}
+
+func TestRun_CustomWorkflowConflictsWithBuiltin(t *testing.T) {
+	dir := t.TempDir()
+	twDir := filepath.Join(dir, ".teamwork")
+	if err := os.MkdirAll(twDir, 0o755); err != nil { t.Fatal(err) }
+	cfg := "model:\n  provider: openai\n  name: gpt-4\ncustom_workflows:\n  feature:\n    steps:\n      - role: coder\n        description: Override\n"
+	if err := os.WriteFile(filepath.Join(twDir, "config.yaml"), []byte(cfg), 0o644); err != nil { t.Fatal(err) }
+	results, _ := validate.Run(dir)
+	cwResults := filterCustomWorkflowResults(results)
+	found := false
+	for _, r := range cwResults {
+		if !r.Passed && strings.Contains(r.Message, "conflicts with built-in") { found = true }
+	}
+	if !found { t.Error("expected conflict") }
+}
+
+func TestRun_CustomWorkflowEmptySteps(t *testing.T) {
+	dir := t.TempDir()
+	twDir := filepath.Join(dir, ".teamwork")
+	if err := os.MkdirAll(twDir, 0o755); err != nil { t.Fatal(err) }
+	cfg := "model:\n  provider: openai\n  name: gpt-4\ncustom_workflows:\n  empty-wf:\n    steps: []\n"
+	if err := os.WriteFile(filepath.Join(twDir, "config.yaml"), []byte(cfg), 0o644); err != nil { t.Fatal(err) }
+	results, _ := validate.Run(dir)
+	cwResults := filterCustomWorkflowResults(results)
+	found := false
+	for _, r := range cwResults {
+		if !r.Passed && strings.Contains(r.Message, "at least one step") { found = true }
+	}
+	if !found { t.Error("expected error for empty steps") }
+}
+
+func TestRun_CustomWorkflowMissingRole(t *testing.T) {
+	dir := t.TempDir()
+	twDir := filepath.Join(dir, ".teamwork")
+	if err := os.MkdirAll(twDir, 0o755); err != nil { t.Fatal(err) }
+	cfg := "model:\n  provider: openai\n  name: gpt-4\ncustom_workflows:\n  bad-wf:\n    steps:\n      - description: missing role\n"
+	if err := os.WriteFile(filepath.Join(twDir, "config.yaml"), []byte(cfg), 0o644); err != nil { t.Fatal(err) }
+	results, _ := validate.Run(dir)
+	cwResults := filterCustomWorkflowResults(results)
+	found := false
+	for _, r := range cwResults {
+		if !r.Passed && strings.Contains(r.Message, "role") { found = true }
+	}
+	if !found { t.Error("expected error for missing role") }
+}
+
+func TestRun_NoCustomWorkflowsSection(t *testing.T) {
+	dir := t.TempDir()
+	twDir := filepath.Join(dir, ".teamwork")
+	if err := os.MkdirAll(twDir, 0o755); err != nil { t.Fatal(err) }
+	cfg := "model:\n  provider: openai\n  name: gpt-4\n"
+	if err := os.WriteFile(filepath.Join(twDir, "config.yaml"), []byte(cfg), 0o644); err != nil { t.Fatal(err) }
+	results, _ := validate.Run(dir)
+	cwResults := filterCustomWorkflowResults(results)
+	if len(cwResults) != 0 { t.Errorf("got %d, want 0", len(cwResults)) }
 }

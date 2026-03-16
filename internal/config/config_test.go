@@ -115,3 +115,46 @@ func TestGetRepo(t *testing.T) {
 		t.Errorf("GetRepo(missing) = %v, want nil", r)
 	}
 }
+
+func TestLoadWithCustomWorkflows(t *testing.T) {
+	dir := t.TempDir()
+	twDir := filepath.Join(dir, ".teamwork")
+	if err := os.MkdirAll(twDir, 0o755); err != nil { t.Fatal(err) }
+	cfg := "model:\n  provider: openai\n  name: gpt-4\ncustom_workflows:\n  data-pipeline:\n    steps:\n      - role: planner\n        description: Design the pipeline\n      - role: coder\n        description: Build the pipeline\n"
+	if err := os.WriteFile(filepath.Join(twDir, "config.yaml"), []byte(cfg), 0o644); err != nil { t.Fatal(err) }
+	got, err := Load(dir)
+	if err != nil { t.Fatalf("Load() error = %v", err) }
+	if got.CustomWorkflows == nil { t.Fatal("CustomWorkflows is nil") }
+	cw, ok := got.CustomWorkflows["data-pipeline"]
+	if !ok { t.Fatal("data-pipeline not found") }
+	if len(cw.Steps) != 2 { t.Fatalf("Steps = %d, want 2", len(cw.Steps)) }
+	if cw.Steps[0].Role != "planner" { t.Errorf("Role = %q, want planner", cw.Steps[0].Role) }
+}
+
+func TestLoadWithoutCustomWorkflows(t *testing.T) {
+	dir := t.TempDir()
+	twDir := filepath.Join(dir, ".teamwork")
+	if err := os.MkdirAll(twDir, 0o755); err != nil { t.Fatal(err) }
+	cfg := "model:\n  provider: openai\n  name: gpt-4\n"
+	if err := os.WriteFile(filepath.Join(twDir, "config.yaml"), []byte(cfg), 0o644); err != nil { t.Fatal(err) }
+	got, err := Load(dir)
+	if err != nil { t.Fatalf("Load() error = %v", err) }
+	if got.CustomWorkflows != nil && len(got.CustomWorkflows) != 0 {
+		t.Errorf("CustomWorkflows = %v, want nil or empty", got.CustomWorkflows)
+	}
+}
+
+func TestHasCustomWorkflow(t *testing.T) {
+	cfg := &Config{
+		CustomWorkflows: map[string]CustomWorkflow{
+			"my-flow": {Steps: []CustomStep{{Role: "coder", Description: "code"}}},
+		},
+	}
+	if !cfg.HasCustomWorkflow("my-flow") { t.Error("expected true") }
+	if cfg.HasCustomWorkflow("missing") { t.Error("expected false") }
+}
+
+func TestHasCustomWorkflow_NilMap(t *testing.T) {
+	cfg := &Config{}
+	if cfg.HasCustomWorkflow("anything") { t.Error("expected false for nil") }
+}

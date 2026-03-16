@@ -180,10 +180,47 @@ func NewEngine(dir string) (*Engine, error) {
 	return &Engine{Dir: dir, Config: cfg}, nil
 }
 
+// lookupDefinition returns the WorkflowDefinition for the given type,
+// checking built-in definitions first and then custom workflows from config.
+func (e *Engine) lookupDefinition(wfType string) (WorkflowDefinition, bool) {
+	if def, ok := definitions[wfType]; ok {
+		return def, true
+	}
+	return CustomDefinition(e.Config, wfType)
+}
+
+// CustomDefinition builds a WorkflowDefinition from a custom workflow in config.
+// It returns the definition and true if found, or a zero value and false otherwise.
+func CustomDefinition(cfg *config.Config, wfType string) (WorkflowDefinition, bool) {
+	if cfg == nil || cfg.CustomWorkflows == nil {
+		return WorkflowDefinition{}, false
+	}
+	cw, ok := cfg.CustomWorkflows[wfType]
+	if !ok || len(cw.Steps) == 0 {
+		return WorkflowDefinition{}, false
+	}
+	def := WorkflowDefinition{Type: wfType}
+	for i, s := range cw.Steps {
+		def.Steps = append(def.Steps, StepInfo{
+			Number: i + 1,
+			Role:   s.Role,
+			Action: s.Description,
+		})
+	}
+	return def, true
+}
+
+// IsBuiltinType reports whether the given type is a built-in workflow type.
+func IsBuiltinType(wfType string) bool {
+	_, ok := definitions[wfType]
+	return ok
+}
+
 // Start initializes a new workflow. It generates an ID from the workflow type,
 // issue number, and goal, creates the state file, and logs a start metric.
 func (e *Engine) Start(workflowType, goal string, issue int) (*state.WorkflowState, error) {
-	if _, ok := definitions[workflowType]; !ok {
+	def, ok := e.lookupDefinition(workflowType)
+	if !ok {
 		return nil, fmt.Errorf("workflow: unknown type %q", workflowType)
 	}
 
@@ -192,13 +229,13 @@ func (e *Engine) Start(workflowType, goal string, issue int) (*state.WorkflowSta
 	ws.Issue = issue
 	ws.Branch = id
 	ws.CurrentStep = 1
-	ws.CurrentRole = definitions[workflowType].Steps[0].Role
+	ws.CurrentRole = def.Steps[0].Role
 
 	// Record a StepRecord for step 1 so its start time is available later.
 	ws.Steps = append(ws.Steps, state.StepRecord{
 		Step:    1,
 		Role:    ws.CurrentRole,
-		Action:  definitions[workflowType].Steps[0].Action,
+		Action:  def.Steps[0].Action,
 		Started: ws.CreatedAt,
 	})
 
@@ -226,7 +263,7 @@ func (e *Engine) Next() ([]NextAction, error) {
 			continue
 		}
 
-		def, ok := definitions[ws.Type]
+		def, ok := e.lookupDefinition(ws.Type)
 		if !ok {
 			continue
 		}
@@ -312,7 +349,7 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 	// Advance state to the next step.
 	nextRole := artifact.NextRole
 	nextAction := ""
-	def, ok := definitions[ws.Type]
+	def, ok := e.lookupDefinition(ws.Type)
 	if ok {
 		for _, s := range def.Steps {
 			if s.Number == ws.CurrentStep+1 {
@@ -409,7 +446,7 @@ func (e *Engine) Approve(workflowID string) error {
 	}
 
 	// Advance to next step if one exists.
-	def, ok := definitions[ws.Type]
+	def, ok := e.lookupDefinition(ws.Type)
 	if ok {
 		var next *StepInfo
 		for i := range def.Steps {
@@ -503,7 +540,7 @@ func (e *Engine) Complete(workflowID string) error {
 		return fmt.Errorf("workflow: load state: %w", err)
 	}
 
-	def, ok := definitions[ws.Type]
+	def, ok := e.lookupDefinition(ws.Type)
 	if ok {
 		totalSteps := len(def.Steps)
 		if ws.CurrentStep < totalSteps {

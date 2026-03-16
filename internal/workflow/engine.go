@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/joshluedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/gates"
 	"github.com/joshluedeman/teamwork/internal/handoff"
 	"github.com/joshluedeman/teamwork/internal/metrics"
 	"github.com/joshluedeman/teamwork/internal/state"
@@ -18,8 +19,9 @@ import (
 
 // Engine manages workflow execution by coordinating state, handoffs, and metrics.
 type Engine struct {
-	Dir    string         // project root directory
-	Config *config.Config // parsed .teamwork/config.yaml
+	Dir        string         // project root directory
+	Config     *config.Config // parsed .teamwork/config.yaml
+	GateRunner gates.Runner   // optional runner for extra quality gates
 }
 
 // StepInfo describes a single step within a workflow definition.
@@ -310,8 +312,9 @@ func (e *Engine) Next() ([]NextAction, error) {
 	return actions, nil
 }
 
-// Handoff validates a handoff artifact, saves it, advances the workflow state,
-// and logs completion and start metrics for the transition.
+// Handoff validates a handoff artifact, saves it, runs any extra quality gates,
+// advances the workflow state, and logs completion and start metrics for the
+// transition.
 func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 	if errs := handoff.Validate(artifact); errs != nil {
 		return fmt.Errorf("workflow: invalid handoff: %s", strings.Join(errs, "; "))
@@ -339,6 +342,21 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 	var durationSec int
 	if startedAt, err := ws.CurrentStepStartedAt(); err == nil {
 		durationSec = int(time.Since(startedAt).Seconds())
+	}
+
+	// Run extra quality gates if configured.
+	if e.GateRunner != nil && e.Config != nil {
+		location := gates.GateKey(ws.CurrentStep)
+		conditions := gates.Lookup(e.Config.Workflows.ExtraGates, ws.Type, location)
+		if len(conditions) > 0 {
+			_, passed, err := gates.RunGate(location, conditions, e.Dir, e.GateRunner)
+			if err != nil {
+				return fmt.Errorf("workflow: run extra gate: %w", err)
+			}
+			if !passed {
+				return fmt.Errorf("workflow: extra gate failed at %s", location)
+			}
+		}
 	}
 
 	// Log completion of the current step.
@@ -616,6 +634,104 @@ func (e *Engine) Fail(workflowID, reason string) error {
 
 	if err := metrics.LogFail(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, reason, reason); err != nil {
 		return fmt.Errorf("workflow: log fail: %w", err)
+	}
+
+	return nil
+}
+
+// Retry resets the current failed or blocked step so it can be re-run.
+// It clears the step's completion timestamp, quality gate, and any blockers,
+// then sets the workflow back to active.
+func (e *Engine) Retry(workflowID string) error {
+	ws, err := state.Load(e.Dir, workflowID)
+	if err != nil {
+		return fmt.Errorf("workflow: load state: %w", err)
+	}
+
+	if ws.Status != state.StatusFailed && ws.Status != state.StatusBlocked {
+		return fmt.Errorf("workflow: cannot retry: workflow %q is %s, not failed or blocked", workflowID, ws.Status)
+	}
+
+	// Reset the current step record so it can be re-executed.
+	for i := range ws.Steps {
+		if ws.Steps[i].Step == ws.CurrentStep {
+			ws.Steps[i].Completed = ""
+			ws.Steps[i].QualityGate = ""
+		}
+	}
+
+	ws.Status = state.StatusActive
+	ws.Blockers = nil
+	ws.UpdatedAt = ""
+
+	if err := ws.Save(e.Dir); err != nil {
+		return fmt.Errorf("workflow: save state: %w", err)
+	}
+
+	if err := metrics.LogRetry(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, "Retrying step"); err != nil {
+		return fmt.Errorf("workflow: log retry: %w", err)
+	}
+
+	return nil
+}
+
+// RollbackStep reverts the workflow to the previous step. It removes the
+// current step record, decrements the step counter, and sets the workflow
+// back to active. Rollback from step 1 is not allowed.
+func (e *Engine) RollbackStep(workflowID string) error {
+	ws, err := state.Load(e.Dir, workflowID)
+	if err != nil {
+		return fmt.Errorf("workflow: load state: %w", err)
+	}
+
+	if ws.Status == state.StatusCompleted || ws.Status == state.StatusCancelled {
+		return fmt.Errorf("workflow: cannot rollback: workflow %q is %s", workflowID, ws.Status)
+	}
+
+	if ws.CurrentStep <= 1 {
+		return fmt.Errorf("workflow: cannot rollback: workflow %q is already at step 1", workflowID)
+	}
+
+	fromStep := ws.CurrentStep
+
+	// Remove step records for the current step.
+	var kept []state.StepRecord
+	for _, sr := range ws.Steps {
+		if sr.Step != ws.CurrentStep {
+			kept = append(kept, sr)
+		}
+	}
+	ws.Steps = kept
+
+	// Move to the previous step and reset its completion status.
+	ws.CurrentStep = fromStep - 1
+	for i := range ws.Steps {
+		if ws.Steps[i].Step == ws.CurrentStep {
+			ws.Steps[i].Completed = ""
+			ws.Steps[i].QualityGate = ""
+		}
+	}
+
+	// Resolve the role from the workflow definition.
+	def, ok := definitions[ws.Type]
+	if ok {
+		for _, s := range def.Steps {
+			if s.Number == ws.CurrentStep {
+				ws.CurrentRole = s.Role
+				break
+			}
+		}
+	}
+
+	ws.Status = state.StatusActive
+	ws.Blockers = nil
+
+	if err := ws.Save(e.Dir); err != nil {
+		return fmt.Errorf("workflow: save state: %w", err)
+	}
+
+	if err := metrics.LogRollback(e.Dir, workflowID, fromStep, ws.CurrentStep, ws.CurrentRole, "Rolled back step"); err != nil {
+		return fmt.Errorf("workflow: log rollback: %w", err)
 	}
 
 	return nil

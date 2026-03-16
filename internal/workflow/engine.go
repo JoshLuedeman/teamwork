@@ -280,6 +280,11 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 		return fmt.Errorf("workflow: invalid handoff: %s", strings.Join(errs, "; "))
 	}
 
+	// Enforce quality gates from config.
+	if err := e.enforceQualityGates(workflowID, artifact); err != nil {
+		return err
+	}
+
 	ws, err := state.Load(e.Dir, workflowID)
 	if err != nil {
 		return fmt.Errorf("workflow: load state: %w", err)
@@ -338,6 +343,42 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 	// Log start of the next step.
 	if err := metrics.LogStart(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, nextAction); err != nil {
 		return fmt.Errorf("workflow: log next start: %w", err)
+	}
+
+	return nil
+}
+
+// enforceQualityGates checks each configured quality gate against the
+// artifact's GateResults and logs the outcome via metrics.LogGate. It returns
+// an error describing the first gate that has not passed, or nil if all
+// required gates are satisfied.
+func (e *Engine) enforceQualityGates(workflowID string, artifact *handoff.Artifact) error {
+	gates := e.Config.QualityGates
+
+	type gate struct {
+		name    string
+		enabled bool
+	}
+
+	checks := []gate{
+		{"tests_pass", gates.TestsPass},
+		{"lint_pass", gates.LintPass},
+	}
+
+	for _, g := range checks {
+		if !g.enabled {
+			continue
+		}
+		passed, reported := artifact.GateResults[g.name]
+		if reported && passed {
+			_ = metrics.LogGate(e.Dir, workflowID, artifact.Step, artifact.Role, g.name, "passed")
+			continue
+		}
+		_ = metrics.LogGate(e.Dir, workflowID, artifact.Step, artifact.Role, g.name, "failed")
+		if !reported {
+			return fmt.Errorf("workflow: quality gate %q required but not reported in handoff", g.name)
+		}
+		return fmt.Errorf("workflow: quality gate %q failed", g.name)
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package workflow
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -110,6 +111,10 @@ func TestHandoffRecordsNonZeroDuration(t *testing.T) {
 		Date:       "2025-01-01T00:00:00Z",
 		Summary:    "Implemented feature",
 		Context:    "Ready for testing",
+		GateResults: map[string]bool{
+			"tests_pass": true,
+			"lint_pass":  true,
+		},
 	}
 
 	if err := eng.Handoff("feature/1-test", artifact); err != nil {
@@ -212,5 +217,153 @@ func TestSummarizeAggregatesRealDurations(t *testing.T) {
 	}
 	if s.StepCount != 3 {
 		t.Errorf("StepCount = %d, want 3", s.StepCount)
+	}
+}
+
+// setupEngine creates a temp directory with the required .teamwork subdirectories,
+// an active workflow state file, and returns an Engine ready for testing.
+func setupEngine(t *testing.T, gates config.QualityGatesConfig) (*Engine, string) {
+	t.Helper()
+
+	dir := t.TempDir()
+	for _, sub := range []string{"state/feature", "handoffs", "metrics"} {
+		if err := os.MkdirAll(filepath.Join(dir, ".teamwork", sub), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+
+	ws := state.New("feature/1-test", "feature", "Test goal")
+	ws.CurrentStep = 4
+	ws.CurrentRole = "coder"
+	ws.Steps = []state.StepRecord{
+		{Step: 4, Role: "coder", Action: "Implement and open PR", Started: "2025-01-01T00:00:00Z"},
+	}
+	if err := ws.Save(dir); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	cfg := config.Default()
+	cfg.QualityGates = gates
+
+	return &Engine{Dir: dir, Config: cfg}, dir
+}
+
+// validArtifact returns a minimal valid handoff artifact for testing.
+func validArtifact(gateResults map[string]bool) *handoff.Artifact {
+	return &handoff.Artifact{
+		WorkflowID:  "feature/1-test",
+		Step:        4,
+		Role:        "coder",
+		NextRole:    "tester",
+		Date:        "2025-01-01T00:00:00Z",
+		Summary:     "Implemented feature",
+		Context:     "Ready for testing",
+		GateResults: gateResults,
+	}
+}
+
+func TestHandoff_QualityGates(t *testing.T) {
+	tests := []struct {
+		name        string
+		gates       config.QualityGatesConfig
+		gateResults map[string]bool
+		wantErr     string // substring expected in error; empty means no error
+	}{
+		{
+			name: "all gates pass",
+			gates: config.QualityGatesConfig{
+				TestsPass: true,
+				LintPass:  true,
+			},
+			gateResults: map[string]bool{
+				"tests_pass": true,
+				"lint_pass":  true,
+			},
+			wantErr: "",
+		},
+		{
+			name: "tests_pass gate fails",
+			gates: config.QualityGatesConfig{
+				TestsPass: true,
+				LintPass:  false,
+			},
+			gateResults: map[string]bool{
+				"tests_pass": false,
+			},
+			wantErr: `quality gate "tests_pass" failed`,
+		},
+		{
+			name: "lint_pass gate fails",
+			gates: config.QualityGatesConfig{
+				TestsPass: false,
+				LintPass:  true,
+			},
+			gateResults: map[string]bool{
+				"lint_pass": false,
+			},
+			wantErr: `quality gate "lint_pass" failed`,
+		},
+		{
+			name: "tests_pass gate not reported",
+			gates: config.QualityGatesConfig{
+				TestsPass: true,
+				LintPass:  false,
+			},
+			gateResults: map[string]bool{},
+			wantErr:     `quality gate "tests_pass" required but not reported`,
+		},
+		{
+			name: "gates disabled allows handoff",
+			gates: config.QualityGatesConfig{
+				TestsPass: false,
+				LintPass:  false,
+			},
+			gateResults: nil,
+			wantErr:     "",
+		},
+		{
+			name: "only tests_pass enabled and passes",
+			gates: config.QualityGatesConfig{
+				TestsPass: true,
+				LintPass:  false,
+			},
+			gateResults: map[string]bool{
+				"tests_pass": true,
+			},
+			wantErr: "",
+		},
+		{
+			name: "only lint_pass enabled and passes",
+			gates: config.QualityGatesConfig{
+				TestsPass: false,
+				LintPass:  true,
+			},
+			gateResults: map[string]bool{
+				"lint_pass": true,
+			},
+			wantErr: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eng, _ := setupEngine(t, tt.gates)
+			artifact := validArtifact(tt.gateResults)
+
+			err := eng.Handoff("feature/1-test", artifact)
+
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("Handoff() unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("Handoff() expected error containing %q, got nil", tt.wantErr)
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("Handoff() error = %q, want substring %q", err.Error(), tt.wantErr)
+			}
+		})
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/joshluedeman/teamwork/internal/config"
 	"github.com/joshluedeman/teamwork/internal/memory"
+	"github.com/joshluedeman/teamwork/internal/presets"
 )
 
 func TestRunInit_NonInteractive_CreatesDefaultConfig(t *testing.T) {
@@ -285,5 +286,86 @@ func TestRunWizard_PartialCustomValues(t *testing.T) {
 	}
 	if result.Project.Repo != "owner/repo" {
 		t.Errorf("project repo = %q, want default %q", result.Project.Repo, "owner/repo")
+	}
+}
+
+func TestRunInit_WithPreset_UsesPresetConfig(t *testing.T) {
+	for _, name := range presets.Names() {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			cmd := rootCmd
+			cmd.SetArgs([]string{"init", "--dir", dir, "--preset", name})
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("init --preset %s failed: %v", name, err)
+			}
+			cfg, err := config.Load(dir)
+			if err != nil {
+				t.Fatalf("loading config: %v", err)
+			}
+			if len(cfg.Roles.Core) == 0 {
+				t.Error("preset config has no core roles")
+			}
+			if len(cfg.MCPServers) == 0 {
+				t.Error("preset config has no MCP servers")
+			}
+			if _, ok := cfg.MCPServers["github"]; !ok {
+				t.Error("preset config missing github MCP server")
+			}
+		})
+	}
+}
+
+func TestRunInit_WithPreset_GoAPI_HasDevOps(t *testing.T) {
+	dir := t.TempDir()
+	cmd := rootCmd
+	cmd.SetArgs([]string{"init", "--dir", dir, "--preset", "go-api"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("init --preset go-api failed: %v", err)
+	}
+	cfg, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("loading config: %v", err)
+	}
+	found := false
+	for _, role := range cfg.Roles.Optional {
+		if role == "devops" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("go-api preset should include devops in optional roles, got %v", cfg.Roles.Optional)
+	}
+}
+
+func TestRunInit_WithInvalidPreset_ReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	cmd := rootCmd
+	cmd.SetArgs([]string{"init", "--dir", dir, "--preset", "nonexistent"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("init --preset nonexistent should return an error")
+	}
+	if !strings.Contains(err.Error(), "unknown preset") {
+		t.Errorf("error should mention 'unknown preset', got: %v", err)
+	}
+}
+
+func TestRunInit_WithoutPreset_PreservesDefaultBehavior(t *testing.T) {
+	dir := t.TempDir()
+	cmd := rootCmd
+	cmd.SetArgs([]string{"init", "--dir", dir, "--preset", ""})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("init command failed: %v", err)
+	}
+	cfg, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("loading config: %v", err)
+	}
+	if cfg.Project.Name != "my-project" {
+		t.Errorf("project name = %q, want %q", cfg.Project.Name, "my-project")
+	}
+	if len(cfg.MCPServers) != 0 {
+		t.Errorf("default config should have no MCP servers, got %d", len(cfg.MCPServers))
 	}
 }

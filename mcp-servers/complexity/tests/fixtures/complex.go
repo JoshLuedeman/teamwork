@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 func complexFunction(x int, y int, z int) int {

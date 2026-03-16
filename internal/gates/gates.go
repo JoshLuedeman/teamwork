@@ -1,55 +1,78 @@
+// Package gates provides utilities for running custom quality gate scripts
+// during the workflow handoff process.
+//
+// Gate scripts are shell commands configured under extra_gates in
+// .teamwork/config.yaml. Each script is executed with the workflow directory
+// as the working directory and must exit 0 to pass.
 package gates
 
 import (
+"bytes"
+"context"
 "fmt"
 "os/exec"
+"strings"
+"time"
 )
 
-type Runner interface {
-Run(command, dir string) ([]byte, error)
+// gateTimeout is the maximum time a single gate script may run.
+const gateTimeout = 30 * time.Second
+
+// GateFailure records a gate script that exited non-zero.
+type GateFailure struct {
+Script string
+Output string
 }
 
-type ShellRunner struct{}
+// RunGate executes a single gate script and reports whether it passed.
+//
+// The script is run via "sh -c <script>" with dir as the working directory.
+// Gate passes when exit code is 0. Combined stdout+stderr is returned as
+// output regardless of pass/fail.
+func RunGate(dir, script string) (passed bool, output string, err error) {
+ctx, cancel := context.WithTimeout(context.Background(), gateTimeout)
+defer cancel()
 
-func (ShellRunner) Run(command, dir string) ([]byte, error) {
-cmd := exec.Command("/bin/sh", "-c", command)
+cmd := exec.CommandContext(ctx, "sh", "-c", script)
 cmd.Dir = dir
-return cmd.CombinedOutput()
+
+var buf bytes.Buffer
+cmd.Stdout = &buf
+cmd.Stderr = &buf
+
+runErr := cmd.Run()
+output = strings.TrimRight(buf.String(), "\n")
+
+if ctx.Err() != nil {
+return false, output, fmt.Errorf("gates: script %q timed out after %s", script, gateTimeout)
 }
 
-type GateResult struct {
-Condition string
-Output    string
-Passed    bool
+if runErr != nil {
+// A non-zero exit is a gate failure, not a Go-level error.
+if _, ok := runErr.(*exec.ExitError); ok {
+return false, output, nil
+}
+return false, output, fmt.Errorf("gates: run %q: %w", script, runErr)
 }
 
-func GateKey(step int) string {
-return fmt.Sprintf("after_step_%d", step)
+return true, output, nil
 }
 
-func Lookup(extraGates map[string]map[string][]string, workflowType, location string) []string {
-if extraGates == nil {
-return nil
+// RunAll executes all gate scripts in order and collects every failure.
+//
+// Execution continues past individual gate failures so all results are
+// reported at once. A non-nil err is returned only when a script cannot be
+// invoked at all (e.g. "sh" is not on PATH). Gate exit-code failures appear
+// in the returned failures slice.
+func RunAll(dir string, scripts []string) (failures []GateFailure, err error) {
+for _, script := range scripts {
+passed, output, runErr := RunGate(dir, script)
+if runErr != nil {
+return failures, runErr
 }
-locs, ok := extraGates[workflowType]
-if !ok {
-return nil
+if !passed {
+failures = append(failures, GateFailure{Script: script, Output: output})
 }
-return locs[location]
 }
-
-func RunGate(location string, conditions []string, dir string, runner Runner) ([]GateResult, bool, error) {
-var results []GateResult
-for _, cond := range conditions {
-out, err := runner.Run(cond, dir)
-if err != nil {
-if _, ok := err.(*exec.ExitError); ok {
-results = append(results, GateResult{Condition: cond, Output: string(out), Passed: false})
-return results, false, nil
-}
-return results, false, fmt.Errorf("gates: run %q: %w", cond, err)
-}
-results = append(results, GateResult{Condition: cond, Output: string(out), Passed: true})
-}
-return results, true, nil
+return failures, nil
 }

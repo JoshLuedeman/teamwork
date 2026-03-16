@@ -19,9 +19,8 @@ import (
 
 // Engine manages workflow execution by coordinating state, handoffs, and metrics.
 type Engine struct {
-	Dir        string         // project root directory
-	Config     *config.Config // parsed .teamwork/config.yaml
-	GateRunner gates.Runner   // optional runner for extra quality gates
+	Dir    string         // project root directory
+	Config *config.Config // parsed .teamwork/config.yaml
 }
 
 // StepInfo describes a single step within a workflow definition.
@@ -344,17 +343,22 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 		durationSec = int(time.Since(startedAt).Seconds())
 	}
 
-	// Run extra quality gates if configured.
-	if e.GateRunner != nil && e.Config != nil {
-		location := gates.GateKey(ws.CurrentStep)
-		conditions := gates.Lookup(e.Config.Workflows.ExtraGates, ws.Type, location)
-		if len(conditions) > 0 {
-			_, passed, err := gates.RunGate(location, conditions, e.Dir, e.GateRunner)
-			if err != nil {
-				return fmt.Errorf("workflow: run extra gate: %w", err)
+	// Run extra quality gates if configured for this workflow type and step.
+	if e.Config != nil && len(e.Config.Workflows.ExtraGates) > 0 {
+		scripts := e.Config.Workflows.ExtraGates[ws.Type][ws.CurrentRole]
+		if len(scripts) > 0 {
+			failures, gateErr := gates.RunAll(e.Dir, scripts)
+			if gateErr != nil {
+				return fmt.Errorf("workflow: run extra gate: %w", gateErr)
 			}
-			if !passed {
-				return fmt.Errorf("workflow: extra gate failed at %s", location)
+			for _, f := range failures {
+				_ = metrics.LogGate(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, f.Script, "failed")
+			}
+			if len(failures) > 0 {
+				return fmt.Errorf("workflow: extra gate %q failed: %s", failures[0].Script, failures[0].Output)
+			}
+			for _, script := range scripts {
+				_ = metrics.LogGate(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, script, "passed")
 			}
 		}
 	}

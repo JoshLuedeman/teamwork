@@ -17,17 +17,18 @@ import (
 
 // Artifact represents a handoff between two roles in a workflow step.
 type Artifact struct {
-	WorkflowID string
-	Step       int
-	Role       string
-	NextRole   string
-	Date       string
-	Summary    string
-	Artifacts  []string // Files created/modified
-	Context    string   // Context for next role
-	Criteria   []CriterionStatus
-	Questions  []string
-	GatePassed bool
+	WorkflowID  string
+	Step        int
+	Role        string
+	NextRole    string
+	Date        string
+	Summary     string
+	Artifacts   []string // Files created/modified
+	Context     string   // Context for next role
+	Criteria    []CriterionStatus
+	Questions   []string
+	GatePassed  bool
+	GateResults map[string]bool // gate name → pass/fail (e.g. "tests_pass" → true)
 }
 
 // CriterionStatus tracks whether an acceptance criterion has been met.

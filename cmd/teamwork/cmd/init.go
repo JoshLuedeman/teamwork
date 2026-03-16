@@ -67,17 +67,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("writing config: %w", err)
 	}
 
-	// Create empty memory files.
-	memoryFiles := []string{
-		"patterns.yaml",
-		"antipatterns.yaml",
-		"decisions.yaml",
-		"feedback.yaml",
-		"index.yaml",
-	}
-	for _, name := range memoryFiles {
+	// Create seeded memory files with example entries.
+	for name, content := range seedMemoryFiles() {
 		path := filepath.Join(teamworkDir, "memory", name)
-		if err := os.WriteFile(path, []byte(""), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			return fmt.Errorf("creating %s: %w", name, err)
 		}
 	}
@@ -132,4 +125,124 @@ func runWizard(cfg *config.Config, r io.Reader) *config.Config {
 func readLine(reader *bufio.Reader) string {
 	line, _ := reader.ReadString('\n')
 	return strings.TrimSpace(line)
+}
+
+// seedMemoryFiles returns a map of filename to seed content for each memory
+// file. Each file contains 1–2 example entries that demonstrate the YAML
+// structure with all available fields, clearly marked as examples.
+func seedMemoryFiles() map[string]string {
+	return map[string]string{
+		"patterns.yaml": `# Patterns That Work
+#
+# Approaches that work well in this project. Agents should repeat these.
+# Add entries as you discover what works. See docs/protocols.md for format.
+#
+# Available fields per entry:
+#   id:      Unique identifier (e.g. pattern-001). Auto-generated if omitted.
+#   date:    ISO 8601 date (e.g. 2025-01-15). Defaults to today if omitted.
+#   source:  Where this was discovered (e.g. "PR #42 review", "incident retro").
+#   domain:  List of topic tags for indexing (e.g. ["auth", "api"]).
+#   content: The pattern itself — what to do.
+#   context: Why this works, when it was discovered, or supporting details.
+
+entries:
+  - id: pattern-001
+    date: "2025-01-01"
+    source: "example"
+    domain:
+      - example
+    content: "This is an example pattern entry — replace or delete it"
+    context: "Demonstrates the format for pattern entries with all available fields"
+`,
+
+		"antipatterns.yaml": `# Anti-Patterns
+#
+# Approaches that failed or caused problems. Agents should avoid these.
+# Add entries when you discover what doesn't work. See docs/protocols.md for format.
+#
+# Available fields per entry:
+#   id:      Unique identifier (e.g. antipattern-001). Auto-generated if omitted.
+#   date:    ISO 8601 date (e.g. 2025-01-15). Defaults to today if omitted.
+#   source:  Where this was discovered (e.g. "incident retrospective").
+#   domain:  List of topic tags for indexing (e.g. ["deployment", "testing"]).
+#   content: The anti-pattern itself — what to avoid.
+#   context: Why this failed, what happened, or how it was discovered.
+
+entries:
+  - id: antipattern-001
+    date: "2025-01-01"
+    source: "example"
+    domain:
+      - example
+    content: "This is an example anti-pattern entry — replace or delete it"
+    context: "Demonstrates the format for anti-pattern entries with all available fields"
+`,
+
+		"decisions.yaml": `# Key Decisions
+#
+# Significant decisions with rationale and date. Complements ADRs with
+# lighter-weight entries. See docs/protocols.md for format.
+#
+# Available fields per entry:
+#   id:      Unique identifier (e.g. decision-001). Auto-generated if omitted.
+#   date:    ISO 8601 date (e.g. 2025-01-15). Defaults to today if omitted.
+#   source:  Where this decision was made (e.g. "architecture discussion").
+#   domain:  List of topic tags for indexing (e.g. ["architecture", "auth"]).
+#   content: The decision itself — what was decided.
+#   context: Why this decision was made, alternatives considered, or tradeoffs.
+
+entries:
+  - id: decision-001
+    date: "2025-01-01"
+    source: "example"
+    domain:
+      - example
+    content: "This is an example decision entry — replace or delete it"
+    context: "Demonstrates the format for decision entries with all available fields"
+`,
+
+		"feedback.yaml": `# Reviewer and Human Feedback
+#
+# Broadly applicable feedback from code reviews and human input.
+# Not PR-specific — these are lessons that apply across the project.
+# See docs/protocols.md for format.
+#
+# Available fields per entry:
+#   id:      Unique identifier (e.g. feedback-001). Auto-generated if omitted.
+#   date:    ISO 8601 date (e.g. 2025-01-15). Defaults to today if omitted.
+#   source:  Where this feedback came from (e.g. "PR #42 review").
+#   domain:  List of topic tags for indexing (e.g. ["testing", "error-handling"]).
+#   content: The feedback itself — the lesson learned.
+#   context: Broader context or why this feedback matters.
+
+entries:
+  - id: feedback-001
+    date: "2025-01-01"
+    source: "example"
+    domain:
+      - example
+    content: "This is an example feedback entry — replace or delete it"
+    context: "Demonstrates the format for feedback entries with all available fields"
+`,
+
+		"index.yaml": `# Memory Index
+#
+# Maps domains/topics to entry IDs across all memory files for fast lookup.
+# This file is updated automatically when entries are added via the CLI.
+# See docs/protocols.md for format.
+#
+# Structure:
+#   domains:
+#     <domain-name>:
+#       - <entry-id-1>
+#       - <entry-id-2>
+
+domains:
+  example:
+    - pattern-001
+    - antipattern-001
+    - decision-001
+    - feedback-001
+`,
+	}
 }

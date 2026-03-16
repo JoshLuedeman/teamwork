@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/config"
 )
 
 func TestRunInit_NonInteractive_CreatesDefaultConfig(t *testing.T) {

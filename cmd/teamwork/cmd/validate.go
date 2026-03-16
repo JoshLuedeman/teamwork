@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/JoshLuedeman/teamwork/internal/validate"
+	"github.com/joshluedeman/teamwork/internal/validate"
 	"github.com/spf13/cobra"
 )
 

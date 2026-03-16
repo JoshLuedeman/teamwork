@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/JoshLuedeman/teamwork/internal/validate"
+	"github.com/joshluedeman/teamwork/internal/validate"
 )
 
 func writeFile(t *testing.T, dir, rel, content string) {

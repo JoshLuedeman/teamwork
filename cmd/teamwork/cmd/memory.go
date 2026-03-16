@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
-	"github.com/JoshLuedeman/teamwork/internal/memory"
+	"github.com/joshluedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/memory"
 	"github.com/spf13/cobra"
 )
 

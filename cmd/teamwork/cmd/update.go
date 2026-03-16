@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
-	gh "github.com/JoshLuedeman/teamwork/internal/github"
-	"github.com/JoshLuedeman/teamwork/internal/installer"
+	"github.com/joshluedeman/teamwork/internal/config"
+	gh "github.com/joshluedeman/teamwork/internal/github"
+	"github.com/joshluedeman/teamwork/internal/installer"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ Use --create-issue=false to disable this behavior.`,
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
-	updateCmd.Flags().String("source", "JoshLuedeman/teamwork", "Source repository (owner/repo)")
+	updateCmd.Flags().String("source", "joshluedeman/teamwork", "Source repository (owner/repo)")
 	updateCmd.Flags().String("ref", "main", "Git ref to update to (branch, tag, or SHA)")
 	updateCmd.Flags().Bool("force", false, "Overwrite user-modified files without warning")
 	updateCmd.Flags().Bool("create-issue", true, "Create a GitHub issue assigned to Copilot for setup when placeholders are detected")

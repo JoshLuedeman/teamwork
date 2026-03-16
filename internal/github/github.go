@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/config"
 )
 
 // Client communicates with GitHub via the gh CLI.

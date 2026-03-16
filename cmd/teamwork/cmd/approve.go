@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/JoshLuedeman/teamwork/internal/workflow"
+	"github.com/joshluedeman/teamwork/internal/workflow"
 	"github.com/spf13/cobra"
 )
 

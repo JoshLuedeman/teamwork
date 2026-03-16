@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/JoshLuedeman/teamwork/internal/installer"
+	"github.com/joshluedeman/teamwork/internal/installer"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ If the framework is already installed, use 'teamwork update' instead.`,
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().String("source", "JoshLuedeman/teamwork", "Source repository (owner/repo)")
+	installCmd.Flags().String("source", "joshluedeman/teamwork", "Source repository (owner/repo)")
 	installCmd.Flags().String("ref", "main", "Git ref to install from (branch, tag, or SHA)")
 	installCmd.Flags().Bool("force", false, "Overwrite existing installation")
 }

@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/JoshLuedeman/teamwork/internal/tui"
-	"github.com/JoshLuedeman/teamwork/internal/workflow"
+	"github.com/joshluedeman/teamwork/internal/tui"
+	"github.com/joshluedeman/teamwork/internal/workflow"
 	"github.com/spf13/cobra"
 )
 

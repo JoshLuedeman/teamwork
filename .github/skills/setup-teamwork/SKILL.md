@@ -9,6 +9,34 @@ description: "Fill in all CUSTOMIZE placeholders across Teamwork agent files by 
 
 This skill scans the repository to detect the tech stack, languages, build tools, and test frameworks, then fills in all `<!-- CUSTOMIZE -->` placeholders in the agent files under `.github/agents/`.
 
+## Non-Software Project Detection
+
+Before doing anything else, check whether this repository is a software project.
+
+**Look for at least one of these files in the repository root:**
+
+| File | Indicates |
+|------|-----------|
+| `go.mod` | Go project |
+| `package.json` | Node.js / JavaScript / TypeScript project |
+| `Cargo.toml` | Rust project |
+| `pyproject.toml` | Python project |
+| `requirements.txt` | Python project |
+| `pom.xml` | Java/Maven project |
+| `build.gradle` | Java/Kotlin/Gradle project |
+
+**If none of these files are present**, treat the repository as a **content or documentation project** (e.g., a documentation site, design specs, research notes, or a content repo). In that case:
+
+- Set **Tech Stack** to `N/A`
+- Set **Languages** to `N/A`
+- Set **Package Manager** to `N/A`
+- Set **Test Framework** to `N/A`
+- Set **Build Command**, **Test Command**, and **Lint Command** to `N/A`
+- Note in your output: _"No software indicators found — treating as a content/documentation project."_
+- Skip Steps 1 and 2 below and go directly to Step 3 to confirm these defaults with the user before filling in any placeholders.
+
+**If at least one software indicator is found**, continue with the full steps below.
+
 ## Steps
 
 ### Step 1: Analyze the Repository

@@ -30,7 +30,6 @@ var FrameworkFiles = []string{
 	"docs/",
 	".editorconfig",
 	".pre-commit-config.yaml",
-	"Makefile",
 }
 
 // StarterTemplates maps relative path to content for files created once on install.

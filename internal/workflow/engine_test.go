@@ -137,6 +137,58 @@ func TestHandoffRecordsNonZeroDuration(t *testing.T) {
 	}
 }
 
+func TestCompleteRecordsNonZeroDuration(t *testing.T) {
+	dir := t.TempDir()
+	for _, sub := range []string{"state/feature", "handoffs", "metrics"} {
+		if err := os.MkdirAll(filepath.Join(dir, ".teamwork", sub), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+
+	// Feature workflow has 9 steps; place the workflow on step 9 (the final step).
+	ws := state.New("feature/1-complete-test", "feature", "Test goal")
+	ws.CurrentStep = 9
+	ws.CurrentRole = "documenter"
+	ws.Steps = []state.StepRecord{
+		{
+			Step:    9,
+			Role:    "documenter",
+			Action:  "Update docs and changelog",
+			Started: time.Now().UTC().Add(-10 * time.Second).Format(time.RFC3339),
+		},
+	}
+	if err := ws.Save(dir); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	cfg := config.Default()
+	eng := &Engine{Dir: dir, Config: cfg}
+
+	if err := eng.Complete("feature/1-complete-test"); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+
+	events, err := metrics.Load(dir, "feature/1-complete-test")
+	if err != nil {
+		t.Fatalf("metrics.Load: %v", err)
+	}
+
+	var completeDuration int
+	for _, ev := range events {
+		if ev.Action == metrics.ActionComplete {
+			completeDuration = ev.DurationSec
+			break
+		}
+	}
+
+	if completeDuration == 0 {
+		t.Error("Complete() should record non-zero duration_sec; got 0 — duration must be calculated before ws.Complete() marks the step done")
+	}
+	if completeDuration < 9 {
+		t.Errorf("duration_sec = %d, expected >= 9 (step was backdated by 10s)", completeDuration)
+	}
+}
+
 func TestSummarizeAggregatesRealDurations(t *testing.T) {
 	events := []metrics.Event{
 		{Workflow: "test/1", Step: 1, Role: "planner", Action: metrics.ActionStart},

@@ -470,17 +470,19 @@ func (e *Engine) Complete(workflowID string) error {
 		}
 	}
 
+	// Calculate the elapsed time for the final step before marking it complete,
+	// since ws.Complete() sets Completed on the StepRecord and
+	// CurrentStepStartedAt() only matches records where Completed == "".
+	var durationSec int
+	if startedAt, err := ws.CurrentStepStartedAt(); err == nil {
+		durationSec = int(time.Since(startedAt).Seconds())
+	}
+
 	if err := ws.Complete(); err != nil {
 		return fmt.Errorf("workflow: complete: %w", err)
 	}
 	if err := ws.Save(e.Dir); err != nil {
 		return fmt.Errorf("workflow: save state: %w", err)
-	}
-
-	// Calculate the elapsed time for the final step.
-	var durationSec int
-	if startedAt, err := ws.CurrentStepStartedAt(); err == nil {
-		durationSec = int(time.Since(startedAt).Seconds())
 	}
 
 	if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, "Workflow completed", durationSec); err != nil {

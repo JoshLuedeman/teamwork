@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/config"
 	"github.com/spf13/cobra"
 )
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/JoshLuedeman/teamwork/cmd/teamwork/cmd"
+	"github.com/joshluedeman/teamwork/cmd/teamwork/cmd"
 )
 
 // version is set at build time via ldflags:

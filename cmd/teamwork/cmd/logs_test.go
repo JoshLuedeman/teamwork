@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JoshLuedeman/teamwork/internal/metrics"
+	"github.com/joshluedeman/teamwork/internal/metrics"
 )
 
 func writeTestEvents(t *testing.T, dir, workflowID string, events []metrics.Event) {

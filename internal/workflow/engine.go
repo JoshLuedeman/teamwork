@@ -9,10 +9,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
-	"github.com/JoshLuedeman/teamwork/internal/handoff"
-	"github.com/JoshLuedeman/teamwork/internal/metrics"
-	"github.com/JoshLuedeman/teamwork/internal/state"
+	"github.com/joshluedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/handoff"
+	"github.com/joshluedeman/teamwork/internal/metrics"
+	"github.com/joshluedeman/teamwork/internal/state"
 )
 
 // Engine manages workflow execution by coordinating state, handoffs, and metrics.

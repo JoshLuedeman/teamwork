@@ -39,12 +39,12 @@ func TestBuildSetupIssueBody_SingleFile(t *testing.T) {
 }
 
 func TestParseUpdateSource_Valid(t *testing.T) {
-	owner, repo, err := parseUpdateSource("JoshLuedeman/teamwork")
+	owner, repo, err := parseUpdateSource("joshluedeman/teamwork")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if owner != "JoshLuedeman" || repo != "teamwork" {
-		t.Errorf("got owner=%q repo=%q, want JoshLuedeman/teamwork", owner, repo)
+	if owner != "joshluedeman" || repo != "teamwork" {
+		t.Errorf("got owner=%q repo=%q, want joshluedeman/teamwork", owner, repo)
 	}
 }
 

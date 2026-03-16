@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
-	"github.com/JoshLuedeman/teamwork/internal/workflow"
+	"github.com/joshluedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/workflow"
 	"github.com/spf13/cobra"
 )
 

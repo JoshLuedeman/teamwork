@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/JoshLuedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/config"
 	"github.com/spf13/cobra"
 )
 

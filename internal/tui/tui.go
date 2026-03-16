@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/JoshLuedeman/teamwork/internal/state"
-	"github.com/JoshLuedeman/teamwork/internal/workflow"
+	"github.com/joshluedeman/teamwork/internal/state"
+	"github.com/joshluedeman/teamwork/internal/workflow"
 )
 
 // Styles used throughout the dashboard.

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JoshLuedeman/teamwork/internal/metrics"
+	"github.com/joshluedeman/teamwork/internal/metrics"
 	"github.com/spf13/cobra"
 )
 

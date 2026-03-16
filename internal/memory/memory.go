@@ -125,7 +125,9 @@ func SaveIndex(dir string, idx *Index) error {
 
 // Add appends an entry to the specified category and updates the domain index.
 // If the entry has no ID, one is generated automatically.
-func Add(dir string, cat Category, entry Entry) error {
+// When archiveThreshold is greater than zero, entries exceeding the threshold
+// are automatically rotated to a dated archive file.
+func Add(dir string, cat Category, entry Entry, archiveThreshold int) error {
 	mf, err := LoadCategory(dir, cat)
 	if err != nil {
 		return fmt.Errorf("loading category %s: %w", cat, err)
@@ -156,6 +158,13 @@ func Add(dir string, cat Category, entry Entry) error {
 	}
 	if err := SaveIndex(dir, idx); err != nil {
 		return fmt.Errorf("saving index: %w", err)
+	}
+
+	// Archive old entries when the threshold is exceeded.
+	if archiveThreshold > 0 && NeedsArchive(mf, archiveThreshold) {
+		if err := Archive(dir, cat, archiveThreshold); err != nil {
+			return fmt.Errorf("archiving %s: %w", cat, err)
+		}
 	}
 
 	return nil
@@ -238,6 +247,93 @@ func (idx *Index) Rebuild(dir string) error {
 // NeedsArchive reports whether a memory file has more entries than the given threshold.
 func NeedsArchive(mf *MemoryFile, threshold int) bool {
 	return len(mf.Entries) > threshold
+}
+
+// nowFunc is the time source used for archive file naming, overridden in tests.
+var nowFunc = time.Now
+
+// Archive moves entries beyond the threshold to a dated archive file,
+// keeping the most recent entries in the main category file. The domain
+// index is rebuilt after archiving so it reflects only the active entries.
+func Archive(dir string, cat Category, threshold int) error {
+	mf, err := LoadCategory(dir, cat)
+	if err != nil {
+		return fmt.Errorf("loading category %s: %w", cat, err)
+	}
+
+	if !NeedsArchive(mf, threshold) {
+		return nil
+	}
+
+	// Keep the most recent entries (last threshold), archive the rest.
+	cutoff := len(mf.Entries) - threshold
+	toArchive := make([]Entry, cutoff)
+	copy(toArchive, mf.Entries[:cutoff])
+	toKeep := make([]Entry, threshold)
+	copy(toKeep, mf.Entries[cutoff:])
+
+	// Load or create the archive file for the current month.
+	archPath := archiveFilePath(dir, cat, nowFunc())
+	archFile, err := loadMemoryFile(archPath)
+	if err != nil {
+		return fmt.Errorf("loading archive file: %w", err)
+	}
+	archFile.Entries = append(archFile.Entries, toArchive...)
+
+	if err := saveMemoryFile(archPath, archFile); err != nil {
+		return fmt.Errorf("saving archive file: %w", err)
+	}
+
+	// Trim the main file to only the kept entries.
+	mf.Entries = toKeep
+	if err := SaveCategory(dir, cat, mf); err != nil {
+		return fmt.Errorf("saving trimmed category %s: %w", cat, err)
+	}
+
+	// Rebuild the index to reflect removed entries.
+	idx := &Index{}
+	if err := idx.Rebuild(dir); err != nil {
+		return fmt.Errorf("rebuilding index after archive: %w", err)
+	}
+
+	return nil
+}
+
+// archiveFilePath returns the path for a dated archive file.
+func archiveFilePath(dir string, cat Category, t time.Time) string {
+	name := fmt.Sprintf("%s.archive-%s.yaml", string(cat), t.Format("2006-01"))
+	return filepath.Join(dir, ".teamwork", "memory", name)
+}
+
+// loadMemoryFile reads a MemoryFile from the given path.
+// Returns an empty MemoryFile if the file does not exist.
+func loadMemoryFile(path string) (*MemoryFile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &MemoryFile{}, nil
+		}
+		return nil, fmt.Errorf("reading file %s: %w", path, err)
+	}
+
+	var mf MemoryFile
+	if err := yaml.Unmarshal(data, &mf); err != nil {
+		return nil, fmt.Errorf("parsing file %s: %w", path, err)
+	}
+	return &mf, nil
+}
+
+// saveMemoryFile writes a MemoryFile to the given path.
+func saveMemoryFile(path string, mf *MemoryFile) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("creating directory: %w", err)
+	}
+
+	data, err := yaml.Marshal(mf)
+	if err != nil {
+		return fmt.Errorf("marshaling file: %w", err)
+	}
+	return os.WriteFile(path, data, 0o644)
 }
 
 // categoryPrefix returns the ID prefix for a category (e.g. "pattern-").

@@ -92,7 +92,12 @@ func runMemoryAdd(cmd *cobra.Command, args []string) error {
 		Context: context,
 	}
 
-	if err := memory.Add(dir, cat, entry); err != nil {
+	threshold := config.Default().Memory.ArchiveThreshold
+	if cfg, err := config.Load(dir); err == nil {
+		threshold = cfg.Memory.ArchiveThreshold
+	}
+
+	if err := memory.Add(dir, cat, entry, threshold); err != nil {
 		return fmt.Errorf("adding memory entry: %w", err)
 	}
 
@@ -234,7 +239,7 @@ func runMemorySync(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			parsed, _ := parseCategory(cat)
-			if err := memory.Add(repo.Path, parsed, e); err != nil {
+			if err := memory.Add(repo.Path, parsed, e, cfg.Memory.ArchiveThreshold); err != nil {
 				return fmt.Errorf("syncing entry %s to %s: %w", e.ID, repoName, err)
 			}
 			synced++

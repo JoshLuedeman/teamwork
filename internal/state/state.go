@@ -268,6 +268,22 @@ func (s *WorkflowState) Fail(reason string) {
 	s.UpdatedAt = ts
 }
 
+// CurrentStepStartedAt returns the start time of the current step by looking
+// up its StepRecord. Returns an error if no StepRecord exists for the current
+// step or if the timestamp cannot be parsed.
+func (s *WorkflowState) CurrentStepStartedAt() (time.Time, error) {
+	for _, sr := range s.Steps {
+		if sr.Step == s.CurrentStep && sr.Completed == "" {
+			t, err := time.Parse(time.RFC3339, sr.Started)
+			if err != nil {
+				return time.Time{}, fmt.Errorf("state: parse step start time: %w", err)
+			}
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("state: no start record for step %d", s.CurrentStep)
+}
+
 // Cancel marks the workflow as cancelled.
 func (s *WorkflowState) Cancel() {
 	s.Status = StatusCancelled

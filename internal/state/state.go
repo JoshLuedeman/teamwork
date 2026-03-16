@@ -24,40 +24,60 @@ const (
 
 // WorkflowState represents the YAML state file for a single workflow instance.
 type WorkflowState struct {
-	ID          string       `yaml:"id"`
-	Type        string       `yaml:"type"`
-	Status      string       `yaml:"status"`
-	Goal        string       `yaml:"goal"`
-	Issue       int          `yaml:"issue,omitempty"`
-	Branch      string       `yaml:"branch,omitempty"`
-	PullRequest int          `yaml:"pull_request,omitempty"`
-	CurrentStep int          `yaml:"current_step"`
-	CurrentRole string       `yaml:"current_role"`
-	Steps       []StepRecord `yaml:"steps"`
-	Blockers    []Blocker    `yaml:"blockers,omitempty"`
-	CreatedAt   string       `yaml:"created_at"`
-	UpdatedAt   string       `yaml:"updated_at"`
-	CreatedBy   string       `yaml:"created_by"`
+	ID          string       `yaml:"id" json:"id"`
+	Type        string       `yaml:"type" json:"type"`
+	Status      string       `yaml:"status" json:"status"`
+	Goal        string       `yaml:"goal" json:"goal"`
+	Issue       int          `yaml:"issue,omitempty" json:"issue,omitempty"`
+	Branch      string       `yaml:"branch,omitempty" json:"branch,omitempty"`
+	PullRequest int          `yaml:"pull_request,omitempty" json:"pull_request,omitempty"`
+	CurrentStep int          `yaml:"current_step" json:"current_step"`
+	CurrentRole string       `yaml:"current_role" json:"current_role"`
+	Steps       []StepRecord `yaml:"steps" json:"steps"`
+	Blockers    []Blocker    `yaml:"blockers,omitempty" json:"blockers,omitempty"`
+	CreatedAt   string       `yaml:"created_at" json:"created_at"`
+	UpdatedAt   string       `yaml:"updated_at" json:"updated_at"`
+	CreatedBy   string       `yaml:"created_by" json:"created_by"`
 }
 
 // StepRecord captures the execution of a single workflow step.
 type StepRecord struct {
-	Step        int    `yaml:"step"`
-	Role        string `yaml:"role"`
-	Action      string `yaml:"action"`
-	Started     string `yaml:"started"`
-	Completed   string `yaml:"completed,omitempty"`
-	Handoff     string `yaml:"handoff,omitempty"`
-	QualityGate string `yaml:"quality_gate,omitempty"`
-	Repo        string `yaml:"repo,omitempty"`
+	Step        int    `yaml:"step" json:"step"`
+	Role        string `yaml:"role" json:"role"`
+	Action      string `yaml:"action" json:"action"`
+	Started     string `yaml:"started" json:"started"`
+	Completed   string `yaml:"completed,omitempty" json:"completed,omitempty"`
+	Handoff     string `yaml:"handoff,omitempty" json:"handoff,omitempty"`
+	QualityGate string `yaml:"quality_gate,omitempty" json:"quality_gate,omitempty"`
+	Repo        string `yaml:"repo,omitempty" json:"repo,omitempty"`
 }
 
 // Blocker records a reason a workflow cannot proceed.
 type Blocker struct {
-	Reason      string `yaml:"reason"`
-	RaisedBy    string `yaml:"raised_by"`
-	RaisedAt    string `yaml:"raised_at"`
-	EscalatedTo string `yaml:"escalated_to,omitempty"`
+	Reason      string `yaml:"reason" json:"reason"`
+	RaisedBy    string `yaml:"raised_by" json:"raised_by"`
+	RaisedAt    string `yaml:"raised_at" json:"raised_at"`
+	EscalatedTo string `yaml:"escalated_to,omitempty" json:"escalated_to,omitempty"`
+}
+
+// Filter returns the subset of workflows matching the given criteria.
+// Empty values for status or workflowType are treated as "match all".
+func Filter(workflows []*WorkflowState, status, workflowType string) []*WorkflowState {
+	if status == "" && workflowType == "" {
+		return workflows
+	}
+
+	var result []*WorkflowState
+	for _, w := range workflows {
+		if status != "" && w.Status != status {
+			continue
+		}
+		if workflowType != "" && w.Type != workflowType {
+			continue
+		}
+		result = append(result, w)
+	}
+	return result
 }
 
 // now returns the current UTC time formatted as RFC 3339.
@@ -282,6 +302,80 @@ func (s *WorkflowState) CurrentStepStartedAt() (time.Time, error) {
 		}
 	}
 	return time.Time{}, fmt.Errorf("state: no start record for step %d", s.CurrentStep)
+}
+
+// Retry resets the current failed or blocked step so it can be re-executed.
+// It clears blockers, resets the step's completion timestamp and quality gate,
+// and sets the workflow status back to active.
+func (s *WorkflowState) Retry() error {
+	if s.Status != StatusFailed && s.Status != StatusBlocked {
+		return fmt.Errorf("state: cannot retry: workflow %q is %s, must be failed or blocked", s.ID, s.Status)
+	}
+
+	ts := now()
+
+	// Reset the current step record so it can be re-executed.
+	for i := range s.Steps {
+		if s.Steps[i].Step == s.CurrentStep {
+			s.Steps[i].Completed = ""
+			s.Steps[i].QualityGate = ""
+			s.Steps[i].Started = ts
+			break
+		}
+	}
+
+	s.Status = StatusActive
+	s.Blockers = nil
+	s.UpdatedAt = ts
+	return nil
+}
+
+// RollbackStep reverts the workflow to the previous step. It removes the
+// current step record from the log, decrements CurrentStep, and re-opens
+// the previous step by clearing its completion timestamp.
+func (s *WorkflowState) RollbackStep() error {
+	if s.Status != StatusActive && s.Status != StatusFailed && s.Status != StatusBlocked {
+		return fmt.Errorf("state: cannot rollback: workflow %q is %s", s.ID, s.Status)
+	}
+	if s.CurrentStep <= 1 {
+		return fmt.Errorf("state: cannot rollback: workflow %q is on step 1", s.ID)
+	}
+
+	ts := now()
+
+	// Remove the current step record(s) from the log.
+	var kept []StepRecord
+	for _, sr := range s.Steps {
+		if sr.Step != s.CurrentStep {
+			kept = append(kept, sr)
+		}
+	}
+	s.Steps = kept
+
+	// Re-open the previous step by clearing its completion timestamp.
+	prevStep := s.CurrentStep - 1
+	for i := range s.Steps {
+		if s.Steps[i].Step == prevStep {
+			s.Steps[i].Completed = ""
+			s.Steps[i].QualityGate = ""
+		}
+	}
+
+	// Find the previous step's role from the log.
+	prevRole := ""
+	for i := range s.Steps {
+		if s.Steps[i].Step == prevStep {
+			prevRole = s.Steps[i].Role
+			break
+		}
+	}
+
+	s.CurrentStep = prevStep
+	s.CurrentRole = prevRole
+	s.Status = StatusActive
+	s.Blockers = nil
+	s.UpdatedAt = ts
+	return nil
 }
 
 // Cancel marks the workflow as cancelled.

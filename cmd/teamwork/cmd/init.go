@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/joshluedeman/teamwork/internal/config"
+	"github.com/joshluedeman/teamwork/internal/presets"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +21,7 @@ var initCmd = &cobra.Command{
 
 func init() {
 	initCmd.Flags().Bool("non-interactive", false, "Skip interactive wizard even when stdin is a TTY")
+	initCmd.Flags().String("preset", "", "Use a preset config for a specific stack ("+strings.Join(presets.Names(), ", ")+")")
 	rootCmd.AddCommand(initCmd)
 }
 
@@ -34,6 +36,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	presetName, err := cmd.Flags().GetString("preset")
+	if err != nil {
+		return err
+	}
+
 	teamworkDir := filepath.Join(dir, ".teamwork")
 
 	if _, err := os.Stat(teamworkDir); err == nil {
@@ -43,12 +50,25 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("checking .teamwork/: %w", err)
 	}
 
-	cfg := config.Default()
+	var cfg *config.Config
+	if presetName != "" {
+		cfg, err = presets.Get(presetName)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Using preset: %s\n", presetName)
+	} else {
+		cfg = config.Default()
+	}
 
 	// Interactive prompts when stdin is a TTY and not explicitly disabled.
 	if !nonInteractive && isInteractive() {
 		cfg = runWizard(cfg, os.Stdin)
 	}
+
+	// Override quality gate defaults based on what the project actually has.
+	cfg.QualityGates.TestsPass = config.DetectTestFramework(dir)
+	cfg.QualityGates.LintPass = config.DetectLinter(dir)
 
 	// Create subdirectories.
 	subdirs := []string{"state", "handoffs", "memory", "metrics"}

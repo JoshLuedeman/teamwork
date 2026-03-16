@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.3.1] — 2026-03-16
+
+### Fixed
+
+- **Windows installer path separator bug** — Replaced `filepath.Clean` with `path.Clean` in tarball extraction so that framework files in subdirectories (`.github/agents/`, `docs/`) are correctly installed on Windows. `filepath.Clean` converted forward slashes to backslashes, causing `isFrameworkFile()` to silently skip subdirectory paths.
+
 ## [v1.3.0] — 2026-03-16
 
 ### Fixed

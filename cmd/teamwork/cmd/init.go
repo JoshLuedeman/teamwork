@@ -34,6 +34,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+
 	teamworkDir := filepath.Join(dir, ".teamwork")
 
 	if _, err := os.Stat(teamworkDir); err == nil {
@@ -49,6 +50,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if !nonInteractive && isInteractive() {
 		cfg = runWizard(cfg, os.Stdin)
 	}
+
+	// Override quality gate defaults based on what the project actually has.
+	cfg.QualityGates.TestsPass = config.DetectTestFramework(dir)
+	cfg.QualityGates.LintPass = config.DetectLinter(dir)
 
 	// Create subdirectories.
 	subdirs := []string{"state", "handoffs", "memory", "metrics"}

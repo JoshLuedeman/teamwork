@@ -40,6 +40,13 @@ var StarterTemplates = map[string]string{
 		"The format is based on [Keep a Changelog](https://keepachangelog.com/).\n",
 }
 
+// languageInstructionFiles maps instruction file paths to the marker files
+// that indicate the language is used in the project. If none of the markers
+// exist in the target directory, the instruction file is skipped.
+var languageInstructionFiles = map[string][]string{
+	".github/instructions/go.instructions.md": {"go.mod", "go.sum"},
+}
+
 // File represents a single file extracted from the tarball.
 type File struct {
 	Path string
@@ -68,6 +75,8 @@ func Install(dir, owner, repo, ref string) error {
 	if err != nil {
 		return fmt.Errorf("fetching tarball: %w", err)
 	}
+
+	files = filterLanguageFiles(files, dir)
 
 	m := &Manifest{
 		Version: commitSHA,
@@ -145,6 +154,8 @@ func Update(dir, owner, repo, ref string, force bool) error {
 	if err != nil {
 		return fmt.Errorf("fetching tarball: %w", err)
 	}
+
+	files = filterLanguageFiles(files, dir)
 
 	if currentVersion == commitSHA {
 		fmt.Println("Already up to date.")
@@ -552,6 +563,30 @@ func CustomizePlaceholderFiles(dir string) []string {
 		}
 	}
 	return files
+}
+
+// filterLanguageFiles removes language-specific instruction files when the
+// corresponding language is not detected in dir.
+func filterLanguageFiles(files []File, dir string) []File {
+	result := make([]File, 0, len(files))
+	for _, f := range files {
+		markers, ok := languageInstructionFiles[f.Path]
+		if ok && !hasAnyFile(dir, markers) {
+			continue
+		}
+		result = append(result, f)
+	}
+	return result
+}
+
+// hasAnyFile reports whether any of the named files exist in dir.
+func hasAnyFile(dir string, names []string) bool {
+	for _, name := range names {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func readManifest(dir string) (*Manifest, error) {

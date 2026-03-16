@@ -64,7 +64,6 @@ func sampleFrameworkContent() map[string]string {
 		"docs/conventions.md":              "# Conventions\n",
 		".editorconfig":                    "root = true\n",
 		".pre-commit-config.yaml":          "repos: []\n",
-		"Makefile":                         "all:\n\techo ok\n",
 		// Non-framework files — should be skipped:
 		"go.mod":              "module example\n",
 		"cmd/main.go":         "package main\n",
@@ -108,7 +107,6 @@ func TestIsFrameworkFile_Included(t *testing.T) {
 		"docs/glossary.md",
 		".editorconfig",
 		".pre-commit-config.yaml",
-		"Makefile",
 	}
 	for _, c := range cases {
 		if !isFrameworkFile(c) {
@@ -127,6 +125,7 @@ func TestIsFrameworkFile_Excluded(t *testing.T) {
 		"MEMORY.md",
 		"CHANGELOG.md",
 		"README.md",
+		"Makefile",
 		"CLAUDE.md",
 		".cursorrules",
 		"agents/roles/coder.md",
@@ -347,7 +346,6 @@ func TestTarballParsing_FrameworkFilesExtracted(t *testing.T) {
 		"docs/conventions.md",
 		".editorconfig",
 		".pre-commit-config.yaml",
-		"Makefile",
 		".github/copilot-instructions.md",
 	} {
 		if !paths[want] {
@@ -483,7 +481,6 @@ func TestInstall_CleanDir_FrameworkFilesWritten(t *testing.T) {
 		"docs/conventions.md",
 		".editorconfig",
 		".pre-commit-config.yaml",
-		"Makefile",
 	} {
 		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
 			t.Errorf("framework file %q not written: %v", want, err)
@@ -581,6 +578,33 @@ func TestInstall_ExistingStarterFilesNotOverwritten(t *testing.T) {
 	got, _ := os.ReadFile(filepath.Join(dir, "MEMORY.md"))
 	if string(got) != customContent {
 		t.Errorf("MEMORY.md overwritten; got %q, want %q", got, customContent)
+	}
+}
+
+func TestInstall_MakefileNotInstalled(t *testing.T) {
+	dir := t.TempDir()
+	// Include a Makefile referencing scripts/ in the tarball — it should NOT
+	// be extracted because Makefile is not a framework file.
+	content := sampleFrameworkContent()
+	content["Makefile"] = "all:\n\t@bash scripts/build.sh\n"
+	tb := makeTarball(testPrefix, content)
+
+	if err := serveAndInstall(t, dir, tb); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "Makefile")); err == nil {
+		t.Error("Makefile should NOT be installed — it references scripts/ that do not exist")
+	}
+}
+
+func TestFrameworkFiles_NoScriptsReference(t *testing.T) {
+	// Verify that FrameworkFiles does not include Makefile or scripts/,
+	// which would install files referencing nonexistent directories.
+	for _, prefix := range FrameworkFiles {
+		if prefix == "Makefile" || prefix == "scripts/" {
+			t.Errorf("FrameworkFiles should not include %q — it references paths that do not exist after installation", prefix)
+		}
 	}
 }
 

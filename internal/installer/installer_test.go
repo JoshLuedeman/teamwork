@@ -58,6 +58,7 @@ func sampleFrameworkContent() map[string]string {
 		".github/agents/roles/coder.md":    "# Coder role\n",
 		".github/skills/skill.md":          "# Skill\n",
 		".github/instructions/inst.md":     "# Instructions\n",
+		".github/instructions/go.instructions.md":    "# Go Guidelines\n",
 		".github/copilot-instructions.md":  "instructions\n",
 		".github/ISSUE_TEMPLATE/bug.md":    "# Bug\n",
 		".github/PULL_REQUEST_TEMPLATE.md": "# PR template\n",
@@ -605,6 +606,149 @@ func TestFrameworkFiles_NoScriptsReference(t *testing.T) {
 		if prefix == "Makefile" || prefix == "scripts/" {
 			t.Errorf("FrameworkFiles should not include %q — it references paths that do not exist after installation", prefix)
 		}
+	}
+}
+
+// -- Language-specific instruction file tests --
+
+func TestFilterLanguageFiles_KeepsGoInstructionsWhenGoModPresent(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example\n"), 0o644)
+
+	files := []File{
+		{Path: ".github/instructions/go.instructions.md", Data: []byte("# Go\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterLanguageFiles(files, dir)
+	if len(got) != 2 {
+		t.Errorf("expected 2 files, got %d", len(got))
+	}
+}
+
+func TestFilterLanguageFiles_KeepsGoInstructionsWhenGoSumPresent(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "go.sum"), []byte("example v0.0.0\n"), 0o644)
+
+	files := []File{
+		{Path: ".github/instructions/go.instructions.md", Data: []byte("# Go\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterLanguageFiles(files, dir)
+	if len(got) != 2 {
+		t.Errorf("expected 2 files, got %d", len(got))
+	}
+}
+
+func TestFilterLanguageFiles_DropsGoInstructionsWhenNoGoFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	files := []File{
+		{Path: ".github/instructions/go.instructions.md", Data: []byte("# Go\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterLanguageFiles(files, dir)
+	if len(got) != 1 {
+		t.Fatalf("expected 1 file, got %d", len(got))
+	}
+	if got[0].Path != ".editorconfig" {
+		t.Errorf("expected .editorconfig, got %q", got[0].Path)
+	}
+}
+
+func TestFilterLanguageFiles_KeepsNonLanguageFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	files := []File{
+		{Path: ".github/instructions/docs.instructions.md", Data: []byte("# Docs\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterLanguageFiles(files, dir)
+	if len(got) != 2 {
+		t.Errorf("expected 2 files (non-language-specific), got %d", len(got))
+	}
+}
+
+func TestInstall_WithGoMod_GoInstructionsInstalled(t *testing.T) {
+	dir := t.TempDir()
+	// Pre-create go.mod to simulate a Go project.
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example\n"), 0o644)
+
+	tb := makeTarball(testPrefix, sampleFrameworkContent())
+	if err := serveAndInstall(t, dir, tb); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	goInstPath := filepath.Join(dir, ".github", "instructions", "go.instructions.md")
+	if _, err := os.Stat(goInstPath); err != nil {
+		t.Errorf("go.instructions.md should be installed in Go project: %v", err)
+	}
+}
+
+func TestInstall_WithoutGoMod_GoInstructionsNotInstalled(t *testing.T) {
+	dir := t.TempDir()
+	// No go.mod — not a Go project.
+
+	tb := makeTarball(testPrefix, sampleFrameworkContent())
+	if err := serveAndInstall(t, dir, tb); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	goInstPath := filepath.Join(dir, ".github", "instructions", "go.instructions.md")
+	if _, err := os.Stat(goInstPath); !os.IsNotExist(err) {
+		t.Errorf("go.instructions.md should NOT be installed in non-Go project")
+	}
+}
+
+func TestUpdate_WithGoMod_GoInstructionsInstalled(t *testing.T) {
+	dir := t.TempDir()
+	// Pre-create go.mod to simulate a Go project.
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example\n"), 0o644)
+
+	tb1 := makeTarball(testPrefix, map[string]string{
+		".editorconfig": "v1\n",
+	})
+	if err := serveAndInstall(t, dir, tb1); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
+	tb2 := makeTarball(newPrefix, map[string]string{
+		".editorconfig":                           "v2\n",
+		".github/instructions/go.instructions.md": "# Go Guidelines\n",
+	})
+	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	goInstPath := filepath.Join(dir, ".github", "instructions", "go.instructions.md")
+	if _, err := os.Stat(goInstPath); err != nil {
+		t.Errorf("go.instructions.md should be installed in Go project during update: %v", err)
+	}
+}
+
+func TestUpdate_WithoutGoMod_GoInstructionsNotInstalled(t *testing.T) {
+	dir := t.TempDir()
+	// No go.mod — not a Go project.
+
+	tb1 := makeTarball(testPrefix, map[string]string{
+		".editorconfig": "v1\n",
+	})
+	if err := serveAndInstall(t, dir, tb1); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
+	tb2 := makeTarball(newPrefix, map[string]string{
+		".editorconfig":                           "v2\n",
+		".github/instructions/go.instructions.md": "# Go Guidelines\n",
+	})
+	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	goInstPath := filepath.Join(dir, ".github", "instructions", "go.instructions.md")
+	if _, err := os.Stat(goInstPath); !os.IsNotExist(err) {
+		t.Errorf("go.instructions.md should NOT be installed in non-Go project during update")
 	}
 }
 

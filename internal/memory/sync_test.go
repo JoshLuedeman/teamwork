@@ -9,16 +9,6 @@ import (
 
 // setupMemoryDir creates a temp directory with the .teamwork/memory structure
 // and returns the root dir path.
-func setupMemoryDir(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	memDir := filepath.Join(dir, ".teamwork", "memory")
-	if err := os.MkdirAll(memDir, 0o755); err != nil {
-		t.Fatalf("creating memory dir: %v", err)
-	}
-	return dir
-}
-
 func TestSyncToMemoryMD_BasicContent(t *testing.T) {
 	dir := setupMemoryDir(t)
 

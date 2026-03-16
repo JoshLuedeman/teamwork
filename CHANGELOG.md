@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.3.0] — 2026-03-16
+
+### Fixed
+
+- **Lowercase Go module path** — Changed module declaration from `github.com/JoshLuedeman/teamwork` to `github.com/joshluedeman/teamwork` so that `go install` works with the natural lowercase GitHub URL. Go module paths are case-sensitive; the mixed-case path caused `sum.golang.org` 404 errors when users typed lowercase. Updated all imports and `--source` flag defaults across 30 files. (PR #125)
+
 ## [v1.2.0] — 2026-03-08
 
 ### Added

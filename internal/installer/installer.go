@@ -133,6 +133,9 @@ func Install(dir, owner, repo, ref string) error {
 		return err
 	}
 
+	// Pre-populate agent Project Knowledge sections with detected tech stack.
+	PopulateProjectKnowledge(dir)
+
 	fmt.Printf("Installed %d framework files, created %d starter files (version %s)\n", written, starterCreated, shortSHA(commitSHA))
 	return nil
 }

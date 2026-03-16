@@ -47,6 +47,31 @@ var languageInstructionFiles = map[string][]string{
 	".github/instructions/go.instructions.md": {"go.mod", "go.sum"},
 }
 
+// apiIndicatorFiles is the list of files whose presence suggests the project
+// exposes or consumes an API.
+var apiIndicatorFiles = []string{
+	"openapi.yaml",
+	"openapi.json",
+	"swagger.yaml",
+	"swagger.json",
+}
+
+// apiIndicatorDirs is the list of directory names whose presence suggests the
+// project has API-related code.
+var apiIndicatorDirs = []string{
+	"routes",
+	"api",
+	"handlers",
+}
+
+// apiFrameworkDeps is the list of npm package names that indicate an API
+// framework dependency.
+var apiFrameworkDeps = []string{
+	"express",
+	"fastify",
+	"koa",
+}
+
 // File represents a single file extracted from the tarball.
 type File struct {
 	Path string
@@ -77,6 +102,7 @@ func Install(dir, owner, repo, ref string) error {
 	}
 
 	files = filterLanguageFiles(files, dir)
+	files = filterApiAgentFiles(files, dir)
 
 	m := &Manifest{
 		Version: commitSHA,
@@ -156,6 +182,7 @@ func Update(dir, owner, repo, ref string, force bool) error {
 	}
 
 	files = filterLanguageFiles(files, dir)
+	files = filterApiAgentFiles(files, dir)
 
 	if currentVersion == commitSHA {
 		fmt.Println("Already up to date.")
@@ -577,6 +604,67 @@ func filterLanguageFiles(files []File, dir string) []File {
 		result = append(result, f)
 	}
 	return result
+}
+
+// filterApiAgentFiles removes the api-agent file when the project has no
+// detectable API indicators. An API indicator is any of: openapi.yaml/json,
+// swagger.yaml/json, a routes/, api/, or handlers/ directory at the root, or
+// a package.json that declares express, fastify, or koa as a dependency.
+func filterApiAgentFiles(files []File, dir string) []File {
+	if hasAPIIndicator(dir) {
+		return files
+	}
+	result := make([]File, 0, len(files))
+	for _, f := range files {
+		if f.Path == ".github/agents/api-agent.agent.md" {
+			continue
+		}
+		result = append(result, f)
+	}
+	return result
+}
+
+// hasAPIIndicator reports whether dir contains any signal that the project is API-related.
+func hasAPIIndicator(dir string) bool {
+	// Check for OpenAPI/Swagger spec files.
+	if hasAnyFile(dir, apiIndicatorFiles) {
+		return true
+	}
+	// Check for API-related directories.
+	for _, d := range apiIndicatorDirs {
+		info, err := os.Stat(filepath.Join(dir, d))
+		if err == nil && info.IsDir() {
+			return true
+		}
+	}
+	// Check for API framework in package.json dependencies.
+	return hasAPIFrameworkDep(dir)
+}
+
+// hasAPIFrameworkDep reports whether package.json in dir lists any of the
+// known API framework packages (express, fastify, koa) as a dependency.
+func hasAPIFrameworkDep(dir string) bool {
+	data, err := os.ReadFile(filepath.Join(dir, "package.json"))
+	if err != nil {
+		return false
+	}
+	// Unmarshal only the relevant fields.
+	var pkg struct {
+		Dependencies    map[string]string `json:"dependencies"`
+		DevDependencies map[string]string `json:"devDependencies"`
+	}
+	if err := json.Unmarshal(data, &pkg); err != nil {
+		return false
+	}
+	for _, name := range apiFrameworkDeps {
+		if _, ok := pkg.Dependencies[name]; ok {
+			return true
+		}
+		if _, ok := pkg.DevDependencies[name]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // hasAnyFile reports whether any of the named files exist in dir.

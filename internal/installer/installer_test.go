@@ -1060,3 +1060,76 @@ func TestManifest_JSONRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// -- filterApiAgentFiles --
+
+func TestFilterApiAgentFiles_NoAPIIndicators_AgentRemoved(t *testing.T) {
+dir := t.TempDir()
+// No API indicators in dir.
+files := []File{
+{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+{Path: ".github/agents/coder.agent.md", Data: []byte("# Coder\n")},
+{Path: ".editorconfig", Data: []byte("root = true\n")},
+}
+got := filterApiAgentFiles(files, dir)
+for _, f := range got {
+if f.Path == ".github/agents/api-agent.agent.md" {
+t.Error("api-agent.agent.md should be removed when no API indicators are present")
+}
+}
+paths := make(map[string]bool)
+for _, f := range got {
+paths[f.Path] = true
+}
+if !paths[".github/agents/coder.agent.md"] {
+t.Error("coder.agent.md should not be removed")
+}
+}
+
+func TestFilterApiAgentFiles_WithOpenAPISpec_AgentRetained(t *testing.T) {
+dir := t.TempDir()
+if err := os.WriteFile(filepath.Join(dir, "openapi.yaml"), []byte("openapi: 3.0\n"), 0o644); err != nil {
+t.Fatalf("write openapi.yaml: %v", err)
+}
+files := []File{
+{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+}
+got := filterApiAgentFiles(files, dir)
+if len(got) != 1 || got[0].Path != ".github/agents/api-agent.agent.md" {
+t.Error("api-agent.agent.md should be retained when openapi.yaml is present")
+}
+}
+
+func TestFilterApiAgentFiles_WithRoutesDir_AgentRetained(t *testing.T) {
+dir := t.TempDir()
+if err := os.MkdirAll(filepath.Join(dir, "routes"), 0o755); err != nil {
+t.Fatalf("mkdir routes: %v", err)
+}
+files := []File{
+{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+{Path: ".editorconfig", Data: []byte("root = true\n")},
+}
+got := filterApiAgentFiles(files, dir)
+paths := make(map[string]bool)
+for _, f := range got {
+paths[f.Path] = true
+}
+if !paths[".github/agents/api-agent.agent.md"] {
+t.Error("api-agent.agent.md should be retained when routes/ directory is present")
+}
+}
+
+func TestFilterApiAgentFiles_WithExpressInPackageJSON_AgentRetained(t *testing.T) {
+dir := t.TempDir()
+pkgJSON := `{"name":"app","dependencies":{"express":"^4.18.0","lodash":"^4.0.0"}}`
+if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0o644); err != nil {
+t.Fatalf("write package.json: %v", err)
+}
+files := []File{
+{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+}
+got := filterApiAgentFiles(files, dir)
+if len(got) != 1 {
+t.Errorf("expected 1 file, got %d — api-agent should be retained when express is a dependency", len(got))
+}
+}

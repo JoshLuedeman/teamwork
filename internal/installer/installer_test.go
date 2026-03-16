@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -1059,4 +1060,86 @@ func TestManifest_JSONRoundTrip(t *testing.T) {
 			t.Errorf("Files[%q] = %q, want %q", k, got.Files[k], v)
 		}
 	}
+}
+
+// -- filterDependencyFiles --
+
+func TestFilterDependencyFiles_NoDependencyManifest_SkillRemoved(t *testing.T) {
+dir := t.TempDir()
+// No dependency manifest files in dir.
+files := []File{
+{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+{Path: ".github/copilot-instructions.md", Data: []byte("instructions\n")},
+{Path: ".editorconfig", Data: []byte("root = true\n")},
+}
+got := filterDependencyFiles(files, dir)
+for _, f := range got {
+if strings.HasPrefix(f.Path, ".github/skills/dependency-update/") {
+t.Errorf("dependency-update file %q should be removed when no manifest is present", f.Path)
+}
+}
+// Other files must still be present.
+paths := make(map[string]bool)
+for _, f := range got {
+paths[f.Path] = true
+}
+if !paths[".editorconfig"] {
+t.Error(".editorconfig should not be removed")
+}
+}
+
+func TestFilterDependencyFiles_WithGoMod_SkillRetained(t *testing.T) {
+dir := t.TempDir()
+if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example\n"), 0o644); err != nil {
+t.Fatalf("write go.mod: %v", err)
+}
+files := []File{
+{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+{Path: ".editorconfig", Data: []byte("root = true\n")},
+}
+got := filterDependencyFiles(files, dir)
+paths := make(map[string]bool)
+for _, f := range got {
+paths[f.Path] = true
+}
+if !paths[".github/skills/dependency-update/SKILL.md"] {
+t.Error("dependency-update SKILL.md should be retained when go.mod is present")
+}
+}
+
+func TestFilterDependencyFiles_WithPackageJSON_SkillRetained(t *testing.T) {
+dir := t.TempDir()
+if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"app"}`), 0o644); err != nil {
+t.Fatalf("write package.json: %v", err)
+}
+files := []File{
+{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+}
+got := filterDependencyFiles(files, dir)
+if len(got) != 1 {
+t.Errorf("expected 1 file, got %d", len(got))
+}
+}
+
+func TestFilterDependencyFiles_NoDependencyManifest_OtherFilesUnaffected(t *testing.T) {
+dir := t.TempDir()
+files := []File{
+{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+{Path: ".github/skills/feature-workflow/SKILL.md", Data: []byte("# Feature\n")},
+{Path: ".github/agents/coder.agent.md", Data: []byte("# Coder\n")},
+}
+got := filterDependencyFiles(files, dir)
+paths := make(map[string]bool)
+for _, f := range got {
+paths[f.Path] = true
+}
+if paths[".github/skills/dependency-update/SKILL.md"] {
+t.Error("dependency-update SKILL.md should be removed")
+}
+if !paths[".github/skills/feature-workflow/SKILL.md"] {
+t.Error("feature-workflow SKILL.md should be retained")
+}
+if !paths[".github/agents/coder.agent.md"] {
+t.Error("coder.agent.md should be retained")
+}
 }

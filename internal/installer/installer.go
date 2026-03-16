@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	pathpkg "path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -321,8 +322,8 @@ func fetchTarball(owner, repo, ref string) ([]File, string, error) {
 		}
 
 		// Prevent path traversal (zip slip).
-		relPath = filepath.Clean(relPath)
-		if relPath == "." || strings.HasPrefix(relPath, "..") || filepath.IsAbs(relPath) {
+		relPath = pathpkg.Clean(relPath)
+		if relPath == "." || strings.HasPrefix(relPath, "..") || pathpkg.IsAbs(relPath) {
 			continue
 		}
 

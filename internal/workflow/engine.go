@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/joshluedeman/teamwork/internal/config"
 	"github.com/joshluedeman/teamwork/internal/handoff"
@@ -193,6 +194,14 @@ func (e *Engine) Start(workflowType, goal string, issue int) (*state.WorkflowSta
 	ws.CurrentStep = 1
 	ws.CurrentRole = definitions[workflowType].Steps[0].Role
 
+	// Record a StepRecord for step 1 so its start time is available later.
+	ws.Steps = append(ws.Steps, state.StepRecord{
+		Step:    1,
+		Role:    ws.CurrentRole,
+		Action:  definitions[workflowType].Steps[0].Action,
+		Started: ws.CreatedAt,
+	})
+
 	if err := ws.Save(e.Dir); err != nil {
 		return nil, fmt.Errorf("workflow: save state: %w", err)
 	}
@@ -284,8 +293,14 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 		return fmt.Errorf("workflow: save handoff: %w", err)
 	}
 
+	// Calculate the elapsed time for the current step.
+	var durationSec int
+	if startedAt, err := ws.CurrentStepStartedAt(); err == nil {
+		durationSec = int(time.Since(startedAt).Seconds())
+	}
+
 	// Log completion of the current step.
-	if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, artifact.Summary, 0); err != nil {
+	if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, artifact.Summary, durationSec); err != nil {
 		return fmt.Errorf("workflow: log complete: %w", err)
 	}
 
@@ -363,8 +378,13 @@ func (e *Engine) Approve(workflowID string) error {
 			}
 		}
 		if next != nil {
+			// Calculate the elapsed time for the current step.
+			var durationSec int
+			if startedAt, err := ws.CurrentStepStartedAt(); err == nil {
+				durationSec = int(time.Since(startedAt).Seconds())
+			}
 			// Log completion of the current step.
-			if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, "Human approval", 0); err != nil {
+			if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, "Human approval", durationSec); err != nil {
 				return fmt.Errorf("workflow: log complete: %w", err)
 			}
 			if err := ws.AdvanceStep(ws.CurrentStep, next.Role, next.Action); err != nil {
@@ -457,7 +477,13 @@ func (e *Engine) Complete(workflowID string) error {
 		return fmt.Errorf("workflow: save state: %w", err)
 	}
 
-	if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, "Workflow completed", 0); err != nil {
+	// Calculate the elapsed time for the final step.
+	var durationSec int
+	if startedAt, err := ws.CurrentStepStartedAt(); err == nil {
+		durationSec = int(time.Since(startedAt).Seconds())
+	}
+
+	if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, "Workflow completed", durationSec); err != nil {
 		return fmt.Errorf("workflow: log complete: %w", err)
 	}
 

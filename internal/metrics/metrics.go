@@ -27,6 +27,8 @@ const (
 	ActionUnblock     = "unblock"
 	ActionDefect      = "defect"
 	ActionCancel      = "cancel"
+	ActionRetry       = "retry"
+	ActionRollback    = "rollback"
 )
 
 // Event represents a single metrics entry logged during workflow execution.
@@ -131,6 +133,26 @@ func LogGate(dir, workflowID string, step int, role, detail, result string) erro
 		Action: ActionQualityGate,
 		Detail: detail,
 		Result: result,
+	})
+}
+
+// LogRetry logs a retry event for the given workflow step.
+func LogRetry(dir, workflowID string, step int, role, detail string) error {
+	return Log(dir, workflowID, Event{
+		Step:   step,
+		Role:   role,
+		Action: ActionRetry,
+		Detail: detail,
+	})
+}
+
+// LogRollback logs a rollback event when reverting to a previous step.
+func LogRollback(dir, workflowID string, fromStep, toStep int, role, detail string) error {
+	return Log(dir, workflowID, Event{
+		Step:   toStep,
+		Role:   role,
+		Action: ActionRollback,
+		Detail: detail,
 	})
 }
 

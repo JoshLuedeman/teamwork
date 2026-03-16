@@ -2,6 +2,7 @@
 package validate
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,6 +43,7 @@ func Run(dir string) ([]Result, error) {
 	results = append(results, checkHandoffFiles(twDir)...)
 	results = append(results, checkMemoryFiles(twDir)...)
 	results = append(results, checkMCPServers(twDir)...)
+	results = append(results, checkAgentFiles(dir)...)
 
 	return results, nil
 }
@@ -312,6 +314,21 @@ var knownRoles = map[string]bool{
 	"qa-lead":            true,
 }
 
+// validModelTiers enumerates the recognized model tier values.
+var validModelTiers = map[string]bool{
+	"Premium":  true,
+	"Standard": true,
+	"Fast":     true,
+}
+
+// requiredAgentSections lists the ## headings every agent file must contain.
+var requiredAgentSections = []string{
+	"Identity",
+	"Responsibilities",
+	"Boundaries",
+	"Model Requirements",
+}
+
 // checkMCPServers validates the mcp_servers section of config.yaml, if present.
 func checkMCPServers(twDir string) []Result {
 	var results []Result
@@ -518,4 +535,170 @@ func checkMemoryFiles(twDir string) []Result {
 	})
 
 	return results
+}
+
+// checkAgentFiles validates all *.agent.md files under .github/agents/.
+func checkAgentFiles(dir string) []Result {
+	var results []Result
+	agentsDir := filepath.Join(dir, ".github", "agents")
+
+	if _, err := os.Stat(agentsDir); os.IsNotExist(err) {
+		// No agents directory — optional, skip silently.
+		return results
+	}
+
+	entries, err := os.ReadDir(agentsDir)
+	if err != nil {
+		return results
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".agent.md") {
+			continue
+		}
+
+		path := filepath.Join(agentsDir, entry.Name())
+		relPath := ".github/agents/" + entry.Name()
+
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "agent_readable",
+				Passed:  false,
+				Message: fmt.Sprintf("%s: unreadable: %v", relPath, readErr),
+			})
+			continue
+		}
+
+		content := string(data)
+		results = append(results, validateAgentFile(relPath, content)...)
+	}
+
+	return results
+}
+
+// validateAgentFile runs all checks against a single agent file's content.
+func validateAgentFile(relPath, content string) []Result {
+	var results []Result
+
+	// 1. Check role name from frontmatter against knownRoles.
+	name := extractFrontmatterName(content)
+	if name == "" {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_role",
+			Passed:  false,
+			Message: fmt.Sprintf("%s: missing or empty 'name' in YAML frontmatter", relPath),
+		})
+	} else if !knownRoles[name] {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_role",
+			Passed:  false,
+			Message: fmt.Sprintf("%s: unknown role %q (not in known roles)", relPath, name),
+		})
+	} else {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_role",
+			Passed:  true,
+			Message: fmt.Sprintf("%s: valid role %q", relPath, name),
+		})
+	}
+
+	// 2. Check for required sections.
+	var missingSections []string
+	for _, section := range requiredAgentSections {
+		heading := "## " + section
+		if !strings.Contains(content, heading) {
+			missingSections = append(missingSections, section)
+		}
+	}
+	if len(missingSections) > 0 {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_sections",
+			Passed:  false,
+			Message: fmt.Sprintf("%s: missing required sections: %s", relPath, strings.Join(missingSections, ", ")),
+		})
+	} else {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_sections",
+			Passed:  true,
+			Message: relPath + ": has all required sections",
+		})
+	}
+
+	// 3. Check model tier reference.
+	tier := extractModelTier(content)
+	if tier == "" {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_model_tier",
+			Passed:  false,
+			Message: fmt.Sprintf("%s: no model tier found (expected '- **Tier:** <value>')", relPath),
+		})
+	} else if !validModelTiers[tier] {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_model_tier",
+			Passed:  false,
+			Message: fmt.Sprintf("%s: invalid model tier %q (valid: Premium, Standard, Fast)", relPath, tier),
+		})
+	} else {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_model_tier",
+			Passed:  true,
+			Message: fmt.Sprintf("%s: valid model tier %q", relPath, tier),
+		})
+	}
+
+	// 4. Check for unfilled CUSTOMIZE placeholders (warning, not failure).
+	if strings.Contains(content, "<!-- CUSTOMIZE") {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "agent_customized",
+			Passed:  true,
+			Message: fmt.Sprintf("%s: WARN unfilled CUSTOMIZE placeholder(s) found", relPath),
+		})
+	}
+
+	return results
+}
+
+// extractFrontmatterName parses the YAML frontmatter and returns the "name" field.
+func extractFrontmatterName(content string) string {
+	// Frontmatter is delimited by "---" lines.
+	if !strings.HasPrefix(content, "---") {
+		return ""
+	}
+	end := strings.Index(content[3:], "---")
+	if end < 0 {
+		return ""
+	}
+	fmBlock := content[3 : 3+end]
+
+	var fm struct {
+		Name string `yaml:"name"`
+	}
+	if err := yaml.Unmarshal([]byte(fmBlock), &fm); err != nil {
+		return ""
+	}
+	return fm.Name
+}
+
+// extractModelTier scans for a line matching "- **Tier:** <value>" and returns the tier value.
+func extractModelTier(content string) string {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "- **Tier:**") {
+			tier := strings.TrimSpace(strings.TrimPrefix(line, "- **Tier:**"))
+			return tier
+		}
+	}
+	return ""
 }

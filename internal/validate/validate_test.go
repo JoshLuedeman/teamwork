@@ -768,3 +768,369 @@ func contains(s, sub string) bool {
 			return false
 		}())
 }
+
+// --- Agent file validation tests ---
+
+// validAgentFile returns a minimal valid agent file with all required parts.
+func validAgentFile(name, tier string) string {
+	return `---
+name: ` + name + `
+description: Test agent
+---
+
+# Role: Test
+
+## Identity
+
+You are a test agent.
+
+## Model Requirements
+
+- **Tier:** ` + tier + `
+- **Why:** Test.
+- **Key capabilities needed:** Testing
+
+## Responsibilities
+
+- Do things
+
+## Boundaries
+
+- ✅ **Always:** Do the right thing
+`
+}
+
+// writeAgentFile writes an agent file into the test directory's .github/agents/.
+func writeAgentFile(t *testing.T, dir, filename, content string) {
+	t.Helper()
+	agentDir := filepath.Join(dir, ".github", "agents")
+	if err := os.MkdirAll(agentDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", agentDir, err)
+	}
+	path := filepath.Join(agentDir, filename)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+// filterAgentResults returns only results with an agent-related Check.
+func filterAgentResults(results []validate.Result) []validate.Result {
+	var out []validate.Result
+	for _, r := range results {
+		if contains(r.Check, "agent_") {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func TestAgentFile_ValidFile(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+	writeAgentFile(t, dir, "coder.agent.md", validAgentFile("coder", "Premium"))
+
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+	if len(agentResults) == 0 {
+		t.Fatal("expected agent results, got none")
+	}
+	for _, r := range agentResults {
+		if !r.Passed {
+			t.Errorf("expected pass, got failure: %s", r.Message)
+		}
+	}
+}
+
+func TestAgentFile_CUSTOMIZEPlaceholder(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+
+	content := `---
+name: coder
+description: Test agent
+---
+
+# Role: Coder
+
+## Identity
+
+You are the Coder.
+
+## Project Knowledge
+<!-- CUSTOMIZE: Replace the placeholders below with your project's details -->
+- **Tech Stack:** [e.g., React 18]
+
+## Model Requirements
+
+- **Tier:** Premium
+- **Why:** Test
+
+## Responsibilities
+
+- Do things
+
+## Boundaries
+
+- Do things
+`
+	writeAgentFile(t, dir, "coder.agent.md", content)
+
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+
+	// Should have no failures (CUSTOMIZE is a warning, not a failure).
+	if countFailed(agentResults) != 0 {
+		t.Errorf("expected no failures for CUSTOMIZE placeholder (warning only), got: %v", failedMessages(agentResults))
+	}
+
+	// Should contain a WARN message about CUSTOMIZE.
+	foundWarn := false
+	for _, r := range agentResults {
+		if contains(r.Message, "WARN") && contains(r.Message, "CUSTOMIZE") {
+			foundWarn = true
+		}
+	}
+	if !foundWarn {
+		t.Error("expected a WARN message mentioning CUSTOMIZE")
+	}
+}
+
+func TestAgentFile_MissingSections(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+
+	// File with no required sections at all.
+	content := `---
+name: coder
+description: Missing sections
+---
+
+# Role: Coder
+
+## Model Requirements
+
+- **Tier:** Premium
+
+Some content but no Identity, Responsibilities, or Boundaries sections.
+`
+	writeAgentFile(t, dir, "coder.agent.md", content)
+
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+
+	// Should have a failure for missing sections.
+	msgs := failedMessages(agentResults)
+	found := false
+	for _, m := range msgs {
+		if contains(m, "missing required sections") {
+			found = true
+			// Should mention Identity, Responsibilities, and Boundaries.
+			if !contains(m, "Identity") {
+				t.Errorf("expected missing section 'Identity' mentioned, got: %s", m)
+			}
+			if !contains(m, "Responsibilities") {
+				t.Errorf("expected missing section 'Responsibilities' mentioned, got: %s", m)
+			}
+			if !contains(m, "Boundaries") {
+				t.Errorf("expected missing section 'Boundaries' mentioned, got: %s", m)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("expected failure mentioning 'missing required sections', got: %v", msgs)
+	}
+}
+
+func TestAgentFile_UnknownRole(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+	writeAgentFile(t, dir, "wizard.agent.md", validAgentFile("wizard", "Premium"))
+
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+
+	msgs := failedMessages(agentResults)
+	found := false
+	for _, m := range msgs {
+		if contains(m, "unknown role") && contains(m, "wizard") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected failure mentioning unknown role 'wizard', got: %v", msgs)
+	}
+}
+
+func TestAgentFile_InvalidModelTier(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+	writeAgentFile(t, dir, "coder.agent.md", validAgentFile("coder", "Ultra"))
+
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+
+	msgs := failedMessages(agentResults)
+	found := false
+	for _, m := range msgs {
+		if contains(m, "invalid model tier") && contains(m, "Ultra") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected failure mentioning invalid model tier 'Ultra', got: %v", msgs)
+	}
+}
+
+func TestAgentFile_MissingFrontmatterName(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+
+	content := `---
+description: No name field
+---
+
+# Role: Mystery
+
+## Identity
+
+You are nobody.
+
+## Model Requirements
+
+- **Tier:** Standard
+
+## Responsibilities
+
+- Nothing
+
+## Boundaries
+
+- None
+`
+	writeAgentFile(t, dir, "mystery.agent.md", content)
+
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+
+	msgs := failedMessages(agentResults)
+	found := false
+	for _, m := range msgs {
+		if contains(m, "missing or empty") && contains(m, "name") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected failure mentioning missing 'name', got: %v", msgs)
+	}
+}
+
+func TestAgentFile_MissingModelTier(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+
+	content := `---
+name: coder
+description: No tier
+---
+
+# Role: Coder
+
+## Identity
+
+You are the Coder.
+
+## Model Requirements
+
+No tier line here.
+
+## Responsibilities
+
+- Do things
+
+## Boundaries
+
+- Do things
+`
+	writeAgentFile(t, dir, "coder.agent.md", content)
+
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+
+	msgs := failedMessages(agentResults)
+	found := false
+	for _, m := range msgs {
+		if contains(m, "no model tier found") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected failure mentioning 'no model tier found', got: %v", msgs)
+	}
+}
+
+func TestAgentFile_NoAgentsDir(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+	writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+
+	// No .github/agents/ directory at all — should pass silently.
+	results, err := validate.Run(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	agentResults := filterAgentResults(results)
+	if len(agentResults) != 0 {
+		t.Errorf("expected no agent results when directory is absent, got %d: %+v", len(agentResults), agentResults)
+	}
+}
+
+func TestAgentFile_AllValidTiers(t *testing.T) {
+	tiers := []string{"Premium", "Standard", "Fast"}
+	for _, tier := range tiers {
+		t.Run(tier, func(t *testing.T) {
+			dir := t.TempDir()
+			os.MkdirAll(filepath.Join(dir, ".teamwork"), 0o755)
+			writeFile(t, dir, ".teamwork/config.yaml", validConfig())
+			writeAgentFile(t, dir, "coder.agent.md", validAgentFile("coder", tier))
+
+			results, err := validate.Run(dir)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			agentResults := filterAgentResults(results)
+			for _, r := range agentResults {
+				if !r.Passed {
+					t.Errorf("tier %q: expected pass, got failure: %s", tier, r.Message)
+				}
+			}
+		})
+	}
+}

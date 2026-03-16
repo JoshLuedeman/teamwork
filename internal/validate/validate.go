@@ -39,6 +39,7 @@ func Run(dir string) ([]Result, error) {
 	var results []Result
 
 	results = append(results, checkConfigExists(twDir)...)
+	results = append(results, checkCustomWorkflows(twDir)...)
 	results = append(results, checkStateFiles(twDir)...)
 	results = append(results, checkHandoffFiles(twDir)...)
 	results = append(results, checkMemoryFiles(twDir)...)
@@ -289,6 +290,129 @@ func checkHandoffFiles(twDir string) []Result {
 
 		return nil
 	})
+
+	return results
+}
+
+// builtinWorkflowTypes lists the built-in workflow type names for conflict detection.
+var builtinWorkflowTypes = map[string]bool{
+	"feature": true, "bugfix": true, "refactor": true, "hotfix": true,
+	"security-response": true, "dependency-update": true,
+	"documentation": true, "spike": true, "release": true, "rollback": true,
+}
+
+// checkCustomWorkflows validates the custom_workflows section of config.yaml, if present.
+func checkCustomWorkflows(twDir string) []Result {
+	var results []Result
+	cfgPath := filepath.Join(twDir, "config.yaml")
+	relPath := ".teamwork/config.yaml"
+
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return results
+	}
+
+	var raw map[string]interface{}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return results
+	}
+
+	cwRaw, ok := raw["custom_workflows"]
+	if !ok {
+		return results
+	}
+
+	workflows, _ := cwRaw.(map[string]interface{})
+	if workflows == nil {
+		return results
+	}
+
+	validCount := 0
+	for name, entry := range workflows {
+		wf, _ := entry.(map[string]interface{})
+		if wf == nil {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "custom_workflows",
+				Passed:  false,
+				Message: fmt.Sprintf("custom_workflows.%s: invalid workflow entry", name),
+			})
+			continue
+		}
+
+		if builtinWorkflowTypes[name] {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "custom_workflows",
+				Passed:  false,
+				Message: fmt.Sprintf("custom_workflows.%s: conflicts with built-in workflow type", name),
+			})
+			continue
+		}
+
+		stepsRaw, _ := wf["steps"].([]interface{})
+		if len(stepsRaw) == 0 {
+			results = append(results, Result{
+				Path:    relPath,
+				Check:   "custom_workflows",
+				Passed:  false,
+				Message: fmt.Sprintf("custom_workflows.%s: must have at least one step", name),
+			})
+			continue
+		}
+
+		stepValid := true
+		for i, stepRaw := range stepsRaw {
+			step, _ := stepRaw.(map[string]interface{})
+			if step == nil {
+				results = append(results, Result{
+					Path:    relPath,
+					Check:   "custom_workflows",
+					Passed:  false,
+					Message: fmt.Sprintf("custom_workflows.%s: step %d is invalid", name, i+1),
+				})
+				stepValid = false
+				break
+			}
+
+			role, _ := step["role"].(string)
+			if role == "" {
+				results = append(results, Result{
+					Path:    relPath,
+					Check:   "custom_workflows",
+					Passed:  false,
+					Message: fmt.Sprintf("custom_workflows.%s: step %d missing required field 'role'", name, i+1),
+				})
+				stepValid = false
+				break
+			}
+
+			desc, _ := step["description"].(string)
+			if desc == "" {
+				results = append(results, Result{
+					Path:    relPath,
+					Check:   "custom_workflows",
+					Passed:  false,
+					Message: fmt.Sprintf("custom_workflows.%s: step %d missing required field 'description'", name, i+1),
+				})
+				stepValid = false
+				break
+			}
+		}
+
+		if stepValid {
+			validCount++
+		}
+	}
+
+	if validCount > 0 {
+		results = append(results, Result{
+			Path:    relPath,
+			Check:   "custom_workflows",
+			Passed:  true,
+			Message: fmt.Sprintf("custom_workflows: %d custom workflows defined", validCount),
+		})
+	}
 
 	return results
 }

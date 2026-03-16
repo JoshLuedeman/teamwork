@@ -1,6 +1,10 @@
 package workflow
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/joshluedeman/teamwork/internal/config"
+)
 
 // roleTier maps agent roles to their model tier (premium, standard, fast).
 // Human steps have no tier entry.
@@ -30,6 +34,21 @@ func PreviewSteps(workflowType string) ([]StepInfo, error) {
 		return nil, fmt.Errorf("workflow: unknown type %q", workflowType)
 	}
 	// Return a copy so callers cannot mutate the shared definitions.
+	steps := make([]StepInfo, len(def.Steps))
+	copy(steps, def.Steps)
+	return steps, nil
+}
+
+// PreviewStepsWithConfig returns step definitions for a workflow type,
+// checking both built-in and custom workflow definitions from config.
+func PreviewStepsWithConfig(cfg *config.Config, workflowType string) ([]StepInfo, error) {
+	def, ok := definitions[workflowType]
+	if !ok {
+		def, ok = CustomDefinition(cfg, workflowType)
+	}
+	if !ok {
+		return nil, fmt.Errorf("workflow: unknown type %q", workflowType)
+	}
 	steps := make([]StepInfo, len(def.Steps))
 	copy(steps, def.Steps)
 	return steps, nil

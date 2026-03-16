@@ -29,6 +29,7 @@ func init() {
 	updateCmd.Flags().String("ref", "main", "Git ref to update to (branch, tag, or SHA)")
 	updateCmd.Flags().Bool("force", false, "Overwrite user-modified files without warning")
 	updateCmd.Flags().Bool("create-issue", true, "Create a GitHub issue assigned to Copilot for setup when placeholders are detected")
+	updateCmd.Flags().Bool("check", false, "Report configuration drift without updating files (exits 1 if drift found)")
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
@@ -52,10 +53,18 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	checkOnly, err := cmd.Flags().GetBool("check")
+	if err != nil {
+		return err
+	}
 
 	owner, repo, err := parseUpdateSource(source)
 	if err != nil {
 		return err
+	}
+
+	if checkOnly {
+		return runDriftCheck(cmd, dir, owner, repo, ref)
 	}
 
 	if err := installer.Update(dir, owner, repo, ref, force); err != nil {
@@ -69,6 +78,48 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// runDriftCheck downloads the upstream tarball, compares against installed files,
+// prints a summary to the command output, and returns an ExitError with code 1
+// if drift is detected (suitable for CI use).
+func runDriftCheck(cmd *cobra.Command, dir, owner, repo, ref string) error {
+	out := cmd.OutOrStdout()
+	fmt.Fprintln(out, "Checking for configuration drift...")
+
+	result, err := installer.CheckDrift(dir, owner, repo, ref)
+	if err != nil {
+		return fmt.Errorf("drift check failed: %w", err)
+	}
+
+	if !result.HasDrift() {
+		fmt.Fprintln(out, "No drift detected. Framework files are up to date.")
+		return nil
+	}
+
+	if len(result.Added) > 0 {
+		fmt.Fprintf(out, "\nFiles that would be added (%d):\n", len(result.Added))
+		for _, f := range result.Added {
+			fmt.Fprintf(out, "  + %s\n", f)
+		}
+	}
+	if len(result.Modified) > 0 {
+		fmt.Fprintf(out, "\nFiles that would be modified (%d):\n", len(result.Modified))
+		for _, f := range result.Modified {
+			fmt.Fprintf(out, "  ~ %s\n", f)
+		}
+	}
+	if len(result.Removed) > 0 {
+		fmt.Fprintf(out, "\nFiles that would be removed (%d):\n", len(result.Removed))
+		for _, f := range result.Removed {
+			fmt.Fprintf(out, "  - %s\n", f)
+		}
+	}
+
+	total := len(result.Added) + len(result.Modified) + len(result.Removed)
+	fmt.Fprintf(out, "\nDrift detected: %d file(s) would change. Run 'teamwork update' to apply.\n", total)
+
+	return &ExitError{Code: 1, Message: "drift detected"}
 }
 
 // setupIssueTitle is the canonical title used for setup-teamwork issues.

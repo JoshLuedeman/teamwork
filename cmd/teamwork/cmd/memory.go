@@ -39,6 +39,12 @@ var memorySyncCmd = &cobra.Command{
 	RunE:  runMemorySync,
 }
 
+var memorySyncMDCmd = &cobra.Command{
+	Use:   "sync-md",
+	Short: "Sync memory entries to MEMORY.md",
+	RunE:  runMemorySyncMD,
+}
+
 func init() {
 	memoryAddCmd.Flags().String("category", "", "Category: patterns, antipatterns, decisions, feedback (required)")
 	memoryAddCmd.Flags().String("domain", "", "Comma-separated domain tags (required)")
@@ -60,6 +66,7 @@ func init() {
 	memoryCmd.AddCommand(memorySearchCmd)
 	memoryCmd.AddCommand(memoryListCmd)
 	memoryCmd.AddCommand(memorySyncCmd)
+	memoryCmd.AddCommand(memorySyncMDCmd)
 	rootCmd.AddCommand(memoryCmd)
 }
 
@@ -94,6 +101,17 @@ func runMemoryAdd(cmd *cobra.Command, args []string) error {
 
 	if err := memory.Add(dir, cat, entry); err != nil {
 		return fmt.Errorf("adding memory entry: %w", err)
+	}
+
+	// Sync to MEMORY.md if enabled in config (defaults to true).
+	syncMD := config.Default().Memory.SyncToMemoryMD
+	if cfg, loadErr := config.Load(dir); loadErr == nil {
+		syncMD = cfg.Memory.SyncToMemoryMD
+	}
+	if syncMD {
+		if err := memory.SyncToMemoryMD(dir); err != nil {
+			return fmt.Errorf("syncing to MEMORY.md: %w", err)
+		}
 	}
 
 	fmt.Printf("Added %s entry to %s (domains: %s)\n", cat, catStr+".yaml", domainStr)
@@ -259,4 +277,18 @@ func categoryFromID(id string) string {
 		return "feedback"
 	}
 	return ""
+}
+
+func runMemorySyncMD(cmd *cobra.Command, args []string) error {
+	dir, err := cmd.Flags().GetString("dir")
+	if err != nil {
+		return err
+	}
+
+	if err := memory.SyncToMemoryMD(dir); err != nil {
+		return fmt.Errorf("syncing to MEMORY.md: %w", err)
+	}
+
+	fmt.Println("Synced memory entries to MEMORY.md")
+	return nil
 }

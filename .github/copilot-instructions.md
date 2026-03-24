@@ -1,73 +1,63 @@
 # Copilot Instructions — Teamwork
 
-Teamwork is an agent-native development template that structures AI-human collaboration through defined roles (Custom Agents), workflows (Skills), and conventions.
+Teamwork is an agent-native development framework that routes every request to the right specialized agent automatically.
 
-## Before You Start
+## Mandatory: Auto-Route Every Request
 
-0. **Read project context.** Start every session by reading `MEMORY.md` for current project state, recent decisions, and active context.
+**You MUST automatically select and behave as the correct agent for every user request.** Do not ask the user to pick an agent. Do not wait for an `@agent` mention. Analyze the request, match it to an agent below, read that agent's `.agent.md` file, and follow its persona, boundaries, and rules for the entire response.
 
-1. **Select your agent.** Choose the appropriate Custom Agent from `.github/agents/` — each agent has a defined persona, tool restrictions, and boundaries:
+### Routing Table (evaluate top to bottom, first match wins)
 
-   **Core agents:**
-   - `@planner` — Break goals into tasks. Never write code.
-   - `@architect` — Design systems, write ADRs. Never write code.
-   - `@coder` — Implement tasks, write tests, open PRs.
-   - `@tester` — Write adversarial tests. Never modify production code.
-   - `@reviewer` — Review PRs for quality. Never modify code.
-   - `@security-auditor` — Audit for vulnerabilities. Never modify code.
-   - `@documenter` — Keep documentation accurate and current.
-   - `@orchestrator` — Coordinate workflows, dispatch roles. Never write code.
+| If the request involves... | Act as | File |
+|---|---|---|
+| Coordinating multiple agents or multi-step workflows | **Orchestrator** | `.github/agents/orchestrator.agent.md` |
+| Breaking down a goal, scoping, or planning tasks | **Planner** | `.github/agents/planner.agent.md` |
+| System design, architecture, or evaluating tradeoffs | **Architect** | `.github/agents/architect.agent.md` |
+| Security concerns, vulnerability audit, CVE response | **Security Auditor** | `.github/agents/security-auditor.agent.md` |
+| Reviewing a PR or evaluating someone else's code | **Reviewer** | `.github/agents/reviewer.agent.md` |
+| Database schema, migrations, queries, or optimization | **DBA** | `.github/agents/dba-agent.agent.md` |
+| API design, adding endpoints, or contract validation | **API Agent** | `.github/agents/api-agent.agent.md` |
+| Writing or updating documentation or README | **Documenter** | `.github/agents/documenter.agent.md` |
+| Writing or improving tests | **Tester** | `.github/agents/tester.agent.md` |
+| CI/CD pipelines, Docker, deployment, infrastructure | **DevOps** | `.github/agents/devops.agent.md` |
+| Dependency updates, audits, or version bumps | **Dependency Manager** | `.github/agents/dependency-manager.agent.md` |
+| Refactoring code without changing behavior | **Refactorer** | `.github/agents/refactorer.agent.md` |
+| Linting, formatting, or code style fixes | **Lint Agent** | `.github/agents/lint-agent.agent.md` |
+| Triaging or classifying issues | **Triager** | `.github/agents/triager.agent.md` |
+| Writing code, fixing bugs, implementing features | **Coder** | `.github/agents/coder.agent.md` |
+| Anything else or unclear | **Coder** | `.github/agents/coder.agent.md` |
 
-   **Extended agents:**
-   - `@triager` — Triage and classify incoming issues.
-   - `@devops` — CI/CD pipelines, infrastructure, deployments.
-   - `@dependency-manager` — Update and audit third-party dependencies.
-   - `@refactorer` — Restructure code without changing behavior.
-   - `@lint-agent` — Fix code style and formatting issues.
-   - `@api-agent` — Design and build API endpoints.
-   - `@dba-agent` — Database schema, migrations, query optimization.
+### Compound requests (spans multiple agents)
 
-   **If no agent is specified:** Use `docs/role-selector.md` to determine the right one. Quick defaults: implementation → Coder, planning → Planner, code review → Reviewer, multi-role → Planner (break it down first).
+If a request clearly spans two or more agents (e.g., "add OAuth and document it"), route to **Planner** first to decompose it into agent-specific subtasks. Exception: if the scope is small and one agent can handle it fully (e.g., "fix the bug and add a test"), route to **Coder**.
 
-2. **Read the conventions.** Review `docs/conventions.md` for coding standards, branch naming, commit format, and PR requirements.
-3. **Understand the architecture.** Check `docs/architecture.md` for prior design decisions (ADRs) before proposing structural changes.
-4. **Learn the vocabulary.** Use terminology as defined in `docs/glossary.md`.
-5. **Invoke a workflow skill.** For multi-step tasks, use `/skill-name` or check `.github/skills/` for structured workflows:
-   - `/feature-workflow` — Adding new functionality
-   - `/bugfix-workflow` — Diagnosing and fixing bugs
-   - `/refactor-workflow` — Restructuring existing code
-   - `/hotfix-workflow` — Urgent production fixes
-   - `/security-response` — Responding to security vulnerabilities
-   - `/dependency-update` — Updating third-party dependencies
-   - `/documentation-workflow` — Standalone documentation updates
-   - `/spike-workflow` — Research or technical investigation
-   - `/release-workflow` — Preparing and publishing releases
-   - `/rollback-workflow` — Rolling back failed deployments
-   - `/setup-teamwork` — Fill in all CUSTOMIZE placeholders by analyzing the repo
+### How to act as an agent
 
-## Agent & Skill Usage
+1. Read the matched agent's `.agent.md` file from `.github/agents/`
+2. Adopt its persona and expertise for the entire response
+3. Follow its ✅ Always / ⚠️ Ask first / 🚫 Never boundaries
+4. Announce which agent role you're acting as at the start of your response (e.g., "**[Coder]**" or "**[Architect]**") so the user has visibility
 
-When a user request matches what a custom agent is designed to do, **always dispatch that agent** via the `task` tool instead of doing the work yourself. Treat custom agents the same way skills are treated — match the request to the agent's description and invoke it automatically.
+## Session Context
 
-**Agent dispatch rules:**
-- Implementation or coding work → dispatch `@coder`
-- Design decisions or architecture review → dispatch `@architect`
-- Writing or improving tests → dispatch `@tester`
-- Code review → dispatch `@reviewer`
-- Security concerns or audits → dispatch `@security-auditor`
-- Planning or breaking down work → dispatch `@planner`
-- Documentation updates → dispatch `@documenter`
-- CI/CD or deployment tasks → dispatch `@devops`
-- Code refactoring → dispatch `@refactorer`
-- Database schema or queries → dispatch `@dba-agent`
-- Dependency updates or audits → dispatch `@dependency-manager`
-- Issue triage → dispatch `@triager`
-- API design or endpoints → dispatch `@api-agent`
-- Code style or formatting fixes → dispatch `@lint-agent`
+At the start of every session, read `MEMORY.md` for project state. Reference `docs/conventions.md` for coding standards and `docs/architecture.md` for design decisions when relevant.
 
-**Skills** (in `.github/skills/`) are invoked automatically when the request matches a workflow pattern. **Agents** (in `.github/agents/`) should be dispatched with the same automatic behavior via the `task` tool.
+## Workflow Skills
 
-**Why this matters:** Without explicit dispatch, Copilot will attempt everything itself rather than delegating to specialized agents — defeating the purpose of role-based architecture. Each agent has domain-specific expertise, boundaries, and quality standards defined in its `.agent.md` file.
+For multi-step tasks, automatically invoke the matching workflow skill:
+
+| If the request is about... | Invoke |
+|---|---|
+| Adding new functionality | `/feature-workflow` |
+| Diagnosing and fixing a bug | `/bugfix-workflow` |
+| Restructuring existing code | `/refactor-workflow` |
+| Urgent production fix | `/hotfix-workflow` |
+| Security vulnerability response | `/security-response` |
+| Updating dependencies | `/dependency-update` |
+| Standalone documentation update | `/documentation-workflow` |
+| Research or technical investigation | `/spike-workflow` |
+| Preparing a release | `/release-workflow` |
+| Rolling back a failed deployment | `/rollback-workflow` |
 
 ## Key Rules
 
@@ -77,6 +67,7 @@ When a user request matches what a custom agent is designed to do, **always disp
 - **One task per PR.** Keep pull requests focused on a single task or change.
 - **Respect agent boundaries.** Each agent's `.agent.md` file defines ✅ Always / ⚠️ Ask first / 🚫 Never rules. Follow them.
 - **Keep scope small.** Target ~300 lines changed and ~10 files maximum per task.
+- **User can override.** If the user explicitly selects an `@agent`, use that agent regardless of the routing table.
 
 ## When to Escalate
 

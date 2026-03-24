@@ -58,6 +58,7 @@ For multi-step tasks, automatically invoke the matching workflow skill:
 | Research or technical investigation | `/spike-workflow` |
 | Preparing a release | `/release-workflow` |
 | Rolling back a failed deployment | `/rollback-workflow` |
+| Filling in CUSTOMIZE placeholders after install | `/setup-teamwork` |
 
 ## Key Rules
 

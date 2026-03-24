@@ -55,16 +55,20 @@ func newTestServer(tb []byte) *httptest.Server {
 // sampleFiles returns a set of framework and non-framework files for test tarballs.
 func sampleFrameworkContent() map[string]string {
 	return map[string]string{
-		".github/agents/roles/coder.md":    "# Coder role\n",
-		".github/skills/skill.md":          "# Skill\n",
-		".github/instructions/inst.md":     "# Instructions\n",
-		".github/instructions/go.instructions.md":    "# Go Guidelines\n",
-		".github/copilot-instructions.md":  "instructions\n",
-		".github/ISSUE_TEMPLATE/bug.md":    "# Bug\n",
-		".github/PULL_REQUEST_TEMPLATE.md": "# PR template\n",
-		"docs/conventions.md":              "# Conventions\n",
-		".editorconfig":                    "root = true\n",
-		".pre-commit-config.yaml":          "repos: []\n",
+		".github/agents/roles/coder.md":            "# Coder role\n",
+		".github/skills/skill.md":                  "# Skill\n",
+		".github/instructions/inst.md":             "# Instructions\n",
+		".github/instructions/go.instructions.md":  "# Go Guidelines\n",
+		".github/copilot-instructions.md":          "instructions\n",
+		".github/ISSUE_TEMPLATE/bug.md":            "# Bug\n",
+		".github/PULL_REQUEST_TEMPLATE.md":         "# PR template\n",
+		"docs/conventions.md":                      "# Conventions\n",
+		"scripts/build.sh":                         "#!/bin/bash\ngo build ./cmd/...\n",
+		"scripts/test.sh":                          "#!/bin/bash\ngo test ./...\n",
+		".editorconfig":                            "root = true\n",
+		".pre-commit-config.yaml":                  "repos: []\n",
+		".teamwork/config.yaml":                    "model_tiers:\n  premium: claude-opus\n",
+		"Makefile":                                 "build:\n\t@bash scripts/build.sh\n",
 		// Non-framework files — should be skipped:
 		"go.mod":              "module example\n",
 		"cmd/main.go":         "package main\n",
@@ -106,8 +110,12 @@ func TestIsFrameworkFile_Included(t *testing.T) {
 		".github/PULL_REQUEST_TEMPLATE.md",
 		"docs/conventions.md",
 		"docs/glossary.md",
+		"scripts/build.sh",
+		"scripts/lint.sh",
 		".editorconfig",
 		".pre-commit-config.yaml",
+		".teamwork/config.yaml",
+		"Makefile",
 	}
 	for _, c := range cases {
 		if !isFrameworkFile(c) {
@@ -126,7 +134,6 @@ func TestIsFrameworkFile_Excluded(t *testing.T) {
 		"MEMORY.md",
 		"CHANGELOG.md",
 		"README.md",
-		"Makefile",
 		"CLAUDE.md",
 		".cursorrules",
 		"agents/roles/coder.md",
@@ -345,9 +352,13 @@ func TestTarballParsing_FrameworkFilesExtracted(t *testing.T) {
 	for _, want := range []string{
 		".github/agents/roles/coder.md",
 		"docs/conventions.md",
+		"scripts/build.sh",
+		"scripts/test.sh",
 		".editorconfig",
 		".pre-commit-config.yaml",
 		".github/copilot-instructions.md",
+		".teamwork/config.yaml",
+		"Makefile",
 	} {
 		if !paths[want] {
 			t.Errorf("expected framework file %q to be extracted", want)
@@ -480,8 +491,12 @@ func TestInstall_CleanDir_FrameworkFilesWritten(t *testing.T) {
 	for _, want := range []string{
 		".github/agents/roles/coder.md",
 		"docs/conventions.md",
+		"scripts/build.sh",
+		"scripts/test.sh",
 		".editorconfig",
 		".pre-commit-config.yaml",
+		".teamwork/config.yaml",
+		"Makefile",
 	} {
 		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
 			t.Errorf("framework file %q not written: %v", want, err)
@@ -582,29 +597,46 @@ func TestInstall_ExistingStarterFilesNotOverwritten(t *testing.T) {
 	}
 }
 
-func TestInstall_MakefileNotInstalled(t *testing.T) {
+func TestInstall_MakefileAndScriptsInstalled(t *testing.T) {
 	dir := t.TempDir()
-	// Include a Makefile referencing scripts/ in the tarball — it should NOT
-	// be extracted because Makefile is not a framework file.
 	content := sampleFrameworkContent()
-	content["Makefile"] = "all:\n\t@bash scripts/build.sh\n"
 	tb := makeTarball(testPrefix, content)
 
 	if err := serveAndInstall(t, dir, tb); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "Makefile")); err == nil {
-		t.Error("Makefile should NOT be installed — it references scripts/ that do not exist")
+	for _, want := range []string{"Makefile", "scripts/build.sh", "scripts/test.sh"} {
+		if _, err := os.Stat(filepath.Join(dir, want)); err != nil {
+			t.Errorf("%s should be installed as a framework file: %v", want, err)
+		}
 	}
 }
 
-func TestFrameworkFiles_NoScriptsReference(t *testing.T) {
-	// Verify that FrameworkFiles does not include Makefile or scripts/,
-	// which would install files referencing nonexistent directories.
+func TestInstall_TeamworkConfigInstalled(t *testing.T) {
+	dir := t.TempDir()
+	tb := makeTarball(testPrefix, sampleFrameworkContent())
+
+	if err := serveAndInstall(t, dir, tb); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	cfgPath := filepath.Join(dir, ".teamwork", "config.yaml")
+	if _, err := os.Stat(cfgPath); err != nil {
+		t.Errorf(".teamwork/config.yaml should be installed: %v", err)
+	}
+}
+
+func TestFrameworkFiles_IncludesScriptsAndMakefile(t *testing.T) {
+	found := map[string]bool{"scripts/": false, "Makefile": false, ".teamwork/config.yaml": false}
 	for _, prefix := range FrameworkFiles {
-		if prefix == "Makefile" || prefix == "scripts/" {
-			t.Errorf("FrameworkFiles should not include %q — it references paths that do not exist after installation", prefix)
+		if _, ok := found[prefix]; ok {
+			found[prefix] = true
+		}
+	}
+	for entry, present := range found {
+		if !present {
+			t.Errorf("FrameworkFiles should include %q", entry)
 		}
 	}
 }

@@ -28,8 +28,11 @@ var FrameworkFiles = []string{
 	".github/ISSUE_TEMPLATE/",
 	".github/PULL_REQUEST_TEMPLATE.md",
 	"docs/",
+	"scripts/",
 	".editorconfig",
 	".pre-commit-config.yaml",
+	".teamwork/config.yaml",
+	"Makefile",
 }
 
 // StarterTemplates maps relative path to content for files created once on install.

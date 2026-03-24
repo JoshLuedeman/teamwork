@@ -50,6 +50,19 @@ var languageInstructionFiles = map[string][]string{
 	".github/instructions/go.instructions.md": {"go.mod", "go.sum"},
 }
 
+// dependencyManifests is the list of files whose presence indicates that the
+// project uses a package manager and can benefit from the dependency-update skill.
+var dependencyManifests = []string{
+	"go.mod",
+	"package.json",
+	"Cargo.toml",
+	"requirements.txt",
+	"pyproject.toml",
+	"Gemfile",
+	"pom.xml",
+	"build.gradle",
+}
+
 // File represents a single file extracted from the tarball.
 type File struct {
 	Path string
@@ -80,6 +93,7 @@ func Install(dir, owner, repo, ref string) error {
 	}
 
 	files = filterLanguageFiles(files, dir)
+	files = filterDependencyFiles(files, dir)
 
 	m := &Manifest{
 		Version: commitSHA,
@@ -159,6 +173,7 @@ func Update(dir, owner, repo, ref string, force bool) error {
 	}
 
 	files = filterLanguageFiles(files, dir)
+	files = filterDependencyFiles(files, dir)
 
 	if currentVersion == commitSHA {
 		fmt.Println("Already up to date.")
@@ -575,6 +590,24 @@ func filterLanguageFiles(files []File, dir string) []File {
 	for _, f := range files {
 		markers, ok := languageInstructionFiles[f.Path]
 		if ok && !hasAnyFile(dir, markers) {
+			continue
+		}
+		result = append(result, f)
+	}
+	return result
+}
+
+// filterDependencyFiles removes the dependency-update skill files when the
+// project has no known dependency manifest. If none of the files in
+// dependencyManifests exist in dir, all files under
+// ".github/skills/dependency-update/" are excluded.
+func filterDependencyFiles(files []File, dir string) []File {
+	if hasAnyFile(dir, dependencyManifests) {
+		return files
+	}
+	result := make([]File, 0, len(files))
+	for _, f := range files {
+		if strings.HasPrefix(f.Path, ".github/skills/dependency-update/") {
 			continue
 		}
 		result = append(result, f)

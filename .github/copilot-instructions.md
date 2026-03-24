@@ -85,7 +85,7 @@ Stop and ask the human when:
 ```
 MEMORY.md                       — Project context (read at session start)
 .github/
-  agents/                       — Custom Agents (select from Copilot's dropdown)
+  agents/                       — Custom Agents (auto-routed; override with @agent)
   skills/                       — Skills (invoke via /skill-name)
   instructions/                 — Path-specific instructions (auto-loaded)
   copilot-instructions.md       — This file (repo-wide guidance)
@@ -108,7 +108,7 @@ docs/
 
 ## Model Selection
 
-After selecting your agent, check its **Model Requirements** section for the recommended tier (premium, standard, or fast). Then check `.teamwork/config.yaml` for the project's model mappings.
+After the agent is determined (via auto-routing or user override), check its **Model Requirements** section for the recommended tier (premium, standard, or fast). Then check `.teamwork/config.yaml` for the project's model mappings.
 
 - **If the agent needs a higher tier than your current model:** Delegate the work to a sub-agent using the recommended model, or inform the user that this task would benefit from a higher-tier model.
 - **If the agent needs a lower tier than your current model:** Proceed normally.

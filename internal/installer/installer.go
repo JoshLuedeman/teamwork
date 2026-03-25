@@ -80,6 +80,14 @@ const (
 	versionPath  = ".teamwork/framework-version.txt"
 )
 
+// IsInstalled reports whether framework files have been installed in dir
+// by checking for the version file written by Install.
+func IsInstalled(dir string) bool {
+	vp := filepath.Join(dir, versionPath)
+	_, err := os.Stat(vp)
+	return err == nil
+}
+
 // Install fetches framework files from upstream and writes them to dir.
 func Install(dir, owner, repo, ref string) error {
 	vp := filepath.Join(dir, versionPath)

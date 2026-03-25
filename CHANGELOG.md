@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Merged `install` into `init`** — `teamwork init` now fetches framework files (agents, skills, docs, instructions) from upstream AND creates the `.teamwork/` config directory in a single command. Previously, users needed to run both `teamwork install` and `teamwork init` separately. The `install` command is now a deprecated alias that delegates to `init`. (#170)
+
 ## [v1.3.1] — 2026-03-16
 
 ### Fixed

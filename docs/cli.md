@@ -50,35 +50,51 @@ go install github.com/JoshLuedeman/teamwork/cmd/teamwork@latest
 
 ## Commands
 
-### `teamwork install`
+### `teamwork init`
 
-Install Teamwork framework files into the current project.
+Initialize a complete Teamwork project: fetch framework files and create config.
 
 ```bash
-teamwork install [flags]
+teamwork init [flags]
 ```
 
-Fetches framework files from the upstream Teamwork repository and writes them into your project directory. Creates starter files (MEMORY.md, CHANGELOG.md) if they don't exist. Use this command in a new project to get started with Teamwork.
+Sets up a complete Teamwork project in two steps:
+
+1. **Fetches framework files** (agents, skills, docs, instructions, templates) from the upstream Teamwork repository.
+2. **Creates the `.teamwork/` directory** with config, memory seeds, and subdirectories.
+
+If framework files are already installed, the fetch step is skipped and only the config is created. Use `--force` to re-fetch framework files.
 
 **Flags:**
-- `--source` — Source repository in `owner/repo` format (default: `JoshLuedeman/teamwork`)
+- `--source` — Source repository in `owner/repo` format (default: `joshluedeman/teamwork`)
 - `--ref` — Git ref to install from (branch, tag, or SHA; default: `main`)
-- `--force` — Overwrite existing installation
+- `--force` — Re-fetch framework files even if already installed
+- `--preset` — Use a preset config for a specific stack (e.g., `go-api`, `ts-react`)
+- `--non-interactive` — Skip the interactive wizard
 
 **Example:**
 ```bash
-# Install from the official Teamwork template
-teamwork install
+# Full setup from the official Teamwork template
+teamwork init
 
-# Install from a custom fork
-teamwork install --source myorg/teamwork-template
+# Use a custom fork as the source
+teamwork init --source myorg/teamwork-template
 
 # Install from a specific version
-teamwork install --ref v1.2.0
+teamwork init --ref v1.2.0
 
-# Reinstall and overwrite existing files
-teamwork install --force
+# Re-fetch framework files (overwrite existing)
+teamwork init --force
+
+# Use a preset for a Go API project
+teamwork init --preset go-api
 ```
+
+### `teamwork install` *(deprecated)*
+
+> **Deprecated:** Use `teamwork init` instead — it now fetches framework files and creates config in one step.
+
+The `install` command still works but delegates to `init` internally.
 
 ### `teamwork update`
 
@@ -91,7 +107,7 @@ teamwork update [flags]
 Fetches the latest framework files from the upstream Teamwork repository and applies changes. Files that have been modified locally are skipped with a warning unless `--force` is set.
 
 **Flags:**
-- `--source` — Source repository in `owner/repo` format (default: `JoshLuedeman/teamwork`)
+- `--source` — Source repository in `owner/repo` format (default: `joshluedeman/teamwork`)
 - `--ref` — Git ref to update to (branch, tag, or SHA; default: `main`)
 - `--force` — Overwrite user-modified files without warning
 
@@ -109,16 +125,6 @@ teamwork update --ref v1.2.0
 # Force update, overwriting local changes
 teamwork update --force
 ```
-
-### `teamwork init`
-
-Initialize the `.teamwork/` directory in the current project.
-
-```bash
-teamwork init
-```
-
-Creates the `.teamwork/` directory structure with default configuration files needed for workflow coordination.
 
 ### `teamwork validate`
 

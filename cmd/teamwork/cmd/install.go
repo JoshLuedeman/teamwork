@@ -1,67 +1,40 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
+"fmt"
 
-	"github.com/joshluedeman/teamwork/internal/installer"
-	"github.com/spf13/cobra"
+"github.com/spf13/cobra"
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Install Teamwork framework files into the current project",
-	Long: `Install fetches framework files from the upstream Teamwork repository and writes
-them into the current project directory. Starter files (MEMORY.md, CHANGELOG.md)
-are created if they do not already exist.
-
-If the framework is already installed, use 'teamwork update' instead.`,
-	RunE: runInstall,
+Use:        "install",
+Short:      "Deprecated: use 'teamwork init' instead",
+Long:       "Install is deprecated. Use 'teamwork init' which now fetches framework files and creates config in one step.",
+Deprecated: "use 'teamwork init' instead — it now fetches framework files and creates config in one step.",
+RunE:       runInstall,
 }
 
 func init() {
-	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().String("source", "joshluedeman/teamwork", "Source repository (owner/repo)")
-	installCmd.Flags().String("ref", "main", "Git ref to install from (branch, tag, or SHA)")
-	installCmd.Flags().Bool("force", false, "Overwrite existing installation")
+rootCmd.AddCommand(installCmd)
+installCmd.Flags().String("source", "joshluedeman/teamwork", "Source repository (owner/repo)")
+installCmd.Flags().String("ref", "main", "Git ref to install from (branch, tag, or SHA)")
+installCmd.Flags().Bool("force", false, "Overwrite existing installation")
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	dir, err := cmd.Flags().GetString("dir")
-	if err != nil {
-		return err
-	}
-	source, err := cmd.Flags().GetString("source")
-	if err != nil {
-		return err
-	}
-	ref, err := cmd.Flags().GetString("ref")
-	if err != nil {
-		return err
-	}
-	force, err := cmd.Flags().GetBool("force")
-	if err != nil {
-		return err
-	}
+fmt.Println("Note: 'teamwork install' is deprecated. Please use 'teamwork init' instead.")
 
-	owner, repo, err := parseSource(source)
-	if err != nil {
-		return err
-	}
+// Forward flags to initCmd if they were explicitly set.
+source, _ := cmd.Flags().GetString("source")
+ref, _ := cmd.Flags().GetString("ref")
+force, _ := cmd.Flags().GetBool("force")
 
-	// --force removes the version file so Install doesn't refuse to run.
-	if force {
-		os.Remove(filepath.Join(dir, ".teamwork", "framework-version.txt"))
-	}
-	return installer.Install(dir, owner, repo, ref)
+initCmd.Flags().Set("source", source)
+initCmd.Flags().Set("ref", ref)
+if force {
+initCmd.Flags().Set("force", "true")
 }
+initCmd.Flags().Set("non-interactive", "true")
 
-func parseSource(source string) (string, string, error) {
-	parts := strings.SplitN(source, "/", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", fmt.Errorf("invalid --source format %q: expected owner/repo", source)
-	}
-	return parts[0], parts[1], nil
+return runInit(initCmd, args)
 }

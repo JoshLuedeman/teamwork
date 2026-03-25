@@ -40,9 +40,9 @@ gh teamwork init
 
 3. **Initialize Teamwork in your project** — In your new repo, run:
    ```bash
-   teamwork install
+   teamwork init
    ```
-   This fetches framework files and creates the `.teamwork/` directory structure.
+   This fetches framework files (agents, skills, docs) and creates the `.teamwork/` config directory.
 
 ### After Installation
 
@@ -237,7 +237,7 @@ Phase 2 is complete. The Teamwork CLI (`teamwork`) automates workflow coordinati
 - **Workflow management** — `teamwork start`, `status`, `next`, `approve`, `block`, `cancel`, `fail`, `complete`, `history`
 - **Validation** — `teamwork validate` with JSON output for CI integration
 - **Environment diagnostics** — `teamwork doctor` checks prerequisites and reports issues with actionable fixes
-- **Installation** — `teamwork install` and `teamwork update` for framework setup and upgrades
+- **Installation** — `teamwork init` for full project setup (framework files + config) and `teamwork update` for upgrades
 - **Memory management** — `teamwork memory add`, `search`, `list`, `sync` for structured project memory
 - **Metrics reporting** — `teamwork metrics summary` and `roles` for workflow analytics
 - **Multi-repo coordination** — `teamwork repos` for hub-spoke multi-repository setups
@@ -248,7 +248,7 @@ See [`docs/cli.md`](docs/cli.md) for command reference and [`docs/decisions/004-
 
 ## Phase 3: Auto-Install GitHub App
 
-Phase 3 adds automatic framework installation. A GitHub App + Cloudflare Worker detects new repository creation and pushes Teamwork framework files automatically — no manual `teamwork install` needed.
+Phase 3 adds automatic framework installation. A GitHub App + Cloudflare Worker detects new repository creation and pushes Teamwork framework files automatically — no manual `teamwork init` needed.
 
 See [`docs/github-app-setup.md`](docs/github-app-setup.md) for setup instructions.
 

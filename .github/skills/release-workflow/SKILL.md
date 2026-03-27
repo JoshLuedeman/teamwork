@@ -29,7 +29,7 @@ A human decides the codebase is ready for a new release. This may be driven by:
 | 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Initiates the release; specifies target version number and included scope | Release decision, version strategy | Release request with version number, scope, target date | Version number follows conventions; scope is defined |
 | 2 | **Planner** | Reviews merged work since last release; compiles list of included changes; identifies gaps | Release request, git log, closed issues | Inclusion list (features, fixes, breaking changes), gap report | All merged work accounted for; gaps identified |
-| 3 | **Tester** | Runs full regression test suite; performs smoke tests on key user flows | Inclusion list, test suite | Regression test results, smoke test report | All tests pass; no regressions detected |
+| 3 | **Tester** | Runs full regression test suite (if it exists); performs smoke tests on key user flows | Inclusion list, test suite | Regression test results or manual smoke test report | If test suite exists: all tests pass, no regressions detected. If not: key user flows manually verified and documented |
 | 4 | **Security Auditor** | Performs final security scan — dependency audit, vulnerability check, secrets scan | Codebase at release point, dependency manifest | Security scan results, clearance or blockers | No unresolved high/critical vulnerabilities; no leaked secrets |
 | 5 | **Documenter** | Finalizes changelog, updates version numbers in docs, writes release notes | Inclusion list, previous changelog, version number | Updated changelog, release notes, version-bumped docs | Changelog is complete; release notes are user-facing |
 | 6 | **Coder** | Creates release branch or tag; bumps version numbers in code and config files | Version number, release notes | Release branch/tag, version-bumped source files, PR | Version numbers consistent across all files; branch/tag created |
@@ -59,7 +59,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
   - Gap report: anything planned but not yet merged
 
 **Tester → Security Auditor**
-- Full regression test results (pass/fail summary)
+- Full regression test results (pass/fail summary), or manual smoke test report if no automated test suite exists
 - Smoke test report covering critical user flows
 - List of any test failures with assessment (known flake vs real issue)
 
@@ -85,7 +85,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 ## Completion Criteria
 
 - All planned items are accounted for in the changelog (included or explicitly deferred).
-- Full regression test suite passes with no failures.
+- If a test suite exists: full regression test suite passes with no failures. If not: key user flows manually verified and documented.
 - Security scan shows no unresolved high or critical vulnerabilities.
 - Version numbers are consistent across all source files, configuration, and documentation.
 - Changelog and release notes are complete and accurate.

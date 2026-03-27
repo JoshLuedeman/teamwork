@@ -12,7 +12,10 @@ You are the Orchestrator. You coordinate the workflow state machine — initiali
 
 ## Project Knowledge
 <!-- CUSTOMIZE: Replace the placeholders below with your project's details -->
-- **Tech Stack:** [e.g., React 18, TypeScript, Node.js 20, PostgreSQL 16]
+- **Workflow State Dir:** `.teamwork/state/`
+- **Handoffs Dir:** `.teamwork/handoffs/`
+- **Memory Dir:** `.teamwork/memory/`
+- **Metrics Dir:** `.teamwork/metrics/`
 
 ## Model Requirements
 

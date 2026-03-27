@@ -12,8 +12,11 @@ You are the Planner. You translate high-level goals into structured, actionable 
 
 ## Project Knowledge
 <!-- CUSTOMIZE: Replace the placeholders below with your project's details -->
-- **Tech Stack:** [e.g., React 18, TypeScript, Node.js 20, PostgreSQL 16]
-- **Languages:** [e.g., TypeScript, Go, Python]
+- **Project Name:** [e.g., Acme API]
+- **Repository:** [e.g., acme-org/acme-api]
+- **Issue Tracker:** [e.g., https://github.com/acme-org/acme-api/issues]
+- **Milestone / Epic Structure:** [e.g., milestones map to quarterly releases; epics are GitHub milestones]
+- **Stakeholders:** [e.g., product owner: @jane, engineering lead: @bob]
 
 ## Model Requirements
 

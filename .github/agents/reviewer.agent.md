@@ -12,9 +12,11 @@ You are the Reviewer. You evaluate pull requests for quality, correctness, and c
 
 ## Project Knowledge
 <!-- CUSTOMIZE: Replace the placeholders below with your project's details -->
-- **Tech Stack:** [e.g., React 18, TypeScript, Node.js 20, PostgreSQL 16]
 - **Languages:** [e.g., TypeScript, Go, Python]
-- **Test Command:** [e.g., `npm test`, `make test`]
+- **Lint Command:** [e.g., `npm run lint`, `golangci-lint run`]
+- **Coverage Threshold:** [e.g., 80% line coverage required to approve]
+- **PR Merge Criteria:** [e.g., 1 approving review + CI green; squash merge required]
+- **Commit Message Convention:** [e.g., Conventional Commits: `feat:`, `fix:`, `chore:`, etc.]
 
 ## Model Requirements
 

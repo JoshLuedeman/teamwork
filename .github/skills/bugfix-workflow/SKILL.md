@@ -26,8 +26,8 @@ was expected, and any steps to reproduce.
 | 1 | **Human / Triager** | Files or triages the bug — categorizes, assigns severity, adds repro steps | Observed defect | Bug report with severity, repro steps, affected area | Severity assigned; report is actionable |
 | 2 | **Planner** | Confirms reproduction, identifies affected components, creates fix task | Bug report | Repro confirmation, fix task with acceptance criteria | Bug reproduced; root cause area identified |
 | 3 | **Architect** | Evaluates design implications — could the fix require arch changes or indicate a systemic issue? | Bug report, repro details | Design guidance, scope boundary, systemic flag | Fix scope bounded; design concerns documented |
-| 4 | **Coder** | Writes failing regression test first, then fixes the code, opens PR | Fix task, design guidance, repro steps | PR with fix and regression test, linked to bug report | Regression test fails without fix, passes with it |
-| 5 | **Tester** | Validates fix, checks for regressions, verifies edge cases around the fix | PR, bug report, repro steps | Validation results, additional tests, defect reports | Original bug fixed; no regressions introduced |
+| 4 | **Coder** | Writes failing regression test first (if test infrastructure exists), then fixes the code, opens PR | Fix task, design guidance, repro steps | PR with fix and regression test (or manual repro evidence), linked to bug report | If test infra exists: regression test fails without fix and passes with it. If not: manual repro steps and fix verification documented |
+| 5 | **Tester** | Validates fix, checks for regressions, verifies edge cases around the fix | PR, bug report, repro steps | Validation results, additional tests or manual verification report, defect reports | Original bug fixed; no regressions introduced |
 | 6 | **Security Auditor** | Checks if bug was exploitable and if fix introduces new attack surface | PR diff, bug report, severity | Security assessment, CVE recommendation (if needed) | Security impact assessed and documented |
 | 7 | **Reviewer** | Reviews fix for correctness, minimal scope, regression test quality | PR, bug report, security assessment | Review decision, review comments | Fix is correct and minimal; PR approved |
 | 8 | **Human** | Approves and merges the PR | Approved PR | Merged fix on target branch | Fix merged; CI passes on target branch |
@@ -56,8 +56,9 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - Flag if a systemic issue is detected (may spawn additional issues)
 
 **Coder → Tester**
-- Open PR with the fix and a regression test, linked to the bug report issue
-- CI passing on the PR branch
+- Open PR with the fix and a regression test (if test infrastructure exists), linked to the bug report issue
+- If no test infrastructure exists: manual reproduction steps and fix verification evidence documented in the PR description
+- CI passing on the PR branch (if CI exists)
 
 **Tester → Security Auditor**
 - PR comment confirming the fix resolves the reported bug
@@ -86,9 +87,11 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - **Reproduce first**: The Planner must confirm the bug is reproducible before a fix task is
   created. If it cannot be reproduced, return the report to the reporter requesting more
   detail — environment info, exact input, logs.
-- **Regression test is mandatory**: The Coder must write a test that fails without the fix
-  and passes with it. This is a hard requirement, not optional. The test proves the fix
-  works and prevents the bug from recurring.
+- **Regression test preference**: If test infrastructure exists, the Coder must write a test
+  that fails without the fix and passes with it — this is the preferred approach and proves
+  the fix works. If the project has no test infrastructure, the Coder must instead document
+  manual reproduction steps and verification evidence in the PR description. In either case,
+  the regression must be demonstrably prevented, not assumed.
 - **Minimal fixes**: The Coder should fix only the reported bug. If adjacent problems are
   discovered during investigation, file them as separate issues rather than bundling
   unrelated changes into the fix PR.

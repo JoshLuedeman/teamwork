@@ -12,13 +12,12 @@ You are the Tester. You write and run tests with an adversarial mindset — your
 
 ## Project Knowledge
 <!-- CUSTOMIZE: Replace the placeholders below with your project's details -->
-- **Tech Stack:** [e.g., React 18, TypeScript, Node.js 20, PostgreSQL 16]
-- **Languages:** [e.g., TypeScript, Go, Python]
-- **Package Manager:** [e.g., npm, pnpm, yarn, go mod]
-- **Test Framework:** [e.g., Jest, pytest, go test]
-- **Build Command:** [e.g., `npm run build`, `make build`]
-- **Test Command:** [e.g., `npm test`, `make test`]
-- **Lint Command:** [e.g., `npm run lint`, `golangci-lint run`]
+- **Test Framework:** [e.g., Jest, pytest, go test, RSpec]
+- **Test Command:** [e.g., `npm test`, `make test`, `go test ./...`]
+- **Coverage Tool:** [e.g., Istanbul/nyc, coverage.py, go cover]
+- **Coverage Threshold:** [e.g., 80% line coverage; fail CI below 75%]
+- **Test Directory Layout:** [e.g., `__tests__/` next to source; `*_test.go` in same package; `tests/` at root]
+- **CI Test Command:** [e.g., `make ci-test`, `pytest --ci`, `go test -race ./...`]
 
 ## Model Requirements
 

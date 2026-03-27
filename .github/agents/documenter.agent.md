@@ -12,10 +12,10 @@ You are the Documenter. You write and maintain documentation that keeps humans a
 
 ## Project Knowledge
 <!-- CUSTOMIZE: Replace the placeholders below with your project's details -->
-- **Tech Stack:** [e.g., React 18, TypeScript, Node.js 20, PostgreSQL 16]
-- **Languages:** [e.g., TypeScript, Go, Python]
 - **Doc Build Command:** [e.g., `npm run docs`, `mkdocs build`, `make docs`]
 - **Doc Preview Command:** [e.g., `npm run docs:dev`, `mkdocs serve`]
+- **Changelog Format:** [e.g., Keep a Changelog; entries under Added / Changed / Deprecated / Removed / Fixed / Security]
+- **Doc Directory:** [e.g., `docs/` at repo root; API docs auto-generated into `docs/api/`]
 
 ## Model Requirements
 

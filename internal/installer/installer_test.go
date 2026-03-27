@@ -56,20 +56,20 @@ func newTestServer(tb []byte) *httptest.Server {
 // sampleFiles returns a set of framework and non-framework files for test tarballs.
 func sampleFrameworkContent() map[string]string {
 	return map[string]string{
-		".github/agents/roles/coder.md":            "# Coder role\n",
-		".github/skills/skill.md":                  "# Skill\n",
-		".github/instructions/inst.md":             "# Instructions\n",
-		".github/instructions/go.instructions.md":  "# Go Guidelines\n",
-		".github/copilot-instructions.md":          "instructions\n",
-		".github/ISSUE_TEMPLATE/bug.md":            "# Bug\n",
-		".github/PULL_REQUEST_TEMPLATE.md":         "# PR template\n",
-		"docs/conventions.md":                      "# Conventions\n",
-		"scripts/build.sh":                         "#!/bin/bash\ngo build ./cmd/...\n",
-		"scripts/test.sh":                          "#!/bin/bash\ngo test ./...\n",
-		".editorconfig":                            "root = true\n",
-		".pre-commit-config.yaml":                  "repos: []\n",
-		".teamwork/config.yaml":                    "model_tiers:\n  premium: claude-opus\n",
-		"Makefile":                                 "build:\n\t@bash scripts/build.sh\n",
+		".github/agents/roles/coder.md":           "# Coder role\n",
+		".github/skills/skill.md":                 "# Skill\n",
+		".github/instructions/inst.md":            "# Instructions\n",
+		".github/instructions/go.instructions.md": "# Go Guidelines\n",
+		".github/copilot-instructions.md":         "instructions\n",
+		".github/ISSUE_TEMPLATE/bug.md":           "# Bug\n",
+		".github/PULL_REQUEST_TEMPLATE.md":        "# PR template\n",
+		"docs/conventions.md":                     "# Conventions\n",
+		"scripts/build.sh":                        "#!/bin/bash\ngo build ./cmd/...\n",
+		"scripts/test.sh":                         "#!/bin/bash\ngo test ./...\n",
+		".editorconfig":                           "root = true\n",
+		".pre-commit-config.yaml":                 "repos: []\n",
+		".teamwork/config.yaml":                   "model_tiers:\n  premium: claude-opus\n",
+		"Makefile":                                "build:\n\t@bash scripts/build.sh\n",
 		// Non-framework files — should be skipped:
 		"go.mod":              "module example\n",
 		"cmd/main.go":         "package main\n",
@@ -241,8 +241,6 @@ func TestReadManifest_InvalidJSON(t *testing.T) {
 }
 
 // -- Install (via mock HTTP server) --
-
-
 
 // -- Lower-level tarball parsing tests --
 
@@ -746,7 +744,7 @@ func TestUpdate_WithGoMod_GoInstructionsInstalled(t *testing.T) {
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	tb2 := makeTarball(newPrefix, map[string]string{
-		".editorconfig":                           "v2\n",
+		".editorconfig": "v2\n",
 		".github/instructions/go.instructions.md": "# Go Guidelines\n",
 	})
 	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
@@ -772,7 +770,7 @@ func TestUpdate_WithoutGoMod_GoInstructionsNotInstalled(t *testing.T) {
 
 	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
 	tb2 := makeTarball(newPrefix, map[string]string{
-		".editorconfig":                           "v2\n",
+		".editorconfig": "v2\n",
 		".github/instructions/go.instructions.md": "# Go Guidelines\n",
 	})
 	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
@@ -1097,81 +1095,303 @@ func TestManifest_JSONRoundTrip(t *testing.T) {
 // -- filterDependencyFiles --
 
 func TestFilterDependencyFiles_NoDependencyManifest_SkillRemoved(t *testing.T) {
-dir := t.TempDir()
-// No dependency manifest files in dir.
-files := []File{
-{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
-{Path: ".github/copilot-instructions.md", Data: []byte("instructions\n")},
-{Path: ".editorconfig", Data: []byte("root = true\n")},
-}
-got := filterDependencyFiles(files, dir)
-for _, f := range got {
-if strings.HasPrefix(f.Path, ".github/skills/dependency-update/") {
-t.Errorf("dependency-update file %q should be removed when no manifest is present", f.Path)
-}
-}
-// Other files must still be present.
-paths := make(map[string]bool)
-for _, f := range got {
-paths[f.Path] = true
-}
-if !paths[".editorconfig"] {
-t.Error(".editorconfig should not be removed")
-}
+	dir := t.TempDir()
+	// No dependency manifest files in dir.
+	files := []File{
+		{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+		{Path: ".github/copilot-instructions.md", Data: []byte("instructions\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterDependencyFiles(files, dir)
+	for _, f := range got {
+		if strings.HasPrefix(f.Path, ".github/skills/dependency-update/") {
+			t.Errorf("dependency-update file %q should be removed when no manifest is present", f.Path)
+		}
+	}
+	// Other files must still be present.
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if !paths[".editorconfig"] {
+		t.Error(".editorconfig should not be removed")
+	}
 }
 
 func TestFilterDependencyFiles_WithGoMod_SkillRetained(t *testing.T) {
-dir := t.TempDir()
-if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example\n"), 0o644); err != nil {
-t.Fatalf("write go.mod: %v", err)
-}
-files := []File{
-{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
-{Path: ".editorconfig", Data: []byte("root = true\n")},
-}
-got := filterDependencyFiles(files, dir)
-paths := make(map[string]bool)
-for _, f := range got {
-paths[f.Path] = true
-}
-if !paths[".github/skills/dependency-update/SKILL.md"] {
-t.Error("dependency-update SKILL.md should be retained when go.mod is present")
-}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	files := []File{
+		{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterDependencyFiles(files, dir)
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if !paths[".github/skills/dependency-update/SKILL.md"] {
+		t.Error("dependency-update SKILL.md should be retained when go.mod is present")
+	}
 }
 
 func TestFilterDependencyFiles_WithPackageJSON_SkillRetained(t *testing.T) {
-dir := t.TempDir()
-if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"app"}`), 0o644); err != nil {
-t.Fatalf("write package.json: %v", err)
-}
-files := []File{
-{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
-}
-got := filterDependencyFiles(files, dir)
-if len(got) != 1 {
-t.Errorf("expected 1 file, got %d", len(got))
-}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"app"}`), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	files := []File{
+		{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+	}
+	got := filterDependencyFiles(files, dir)
+	if len(got) != 1 {
+		t.Errorf("expected 1 file, got %d", len(got))
+	}
 }
 
 func TestFilterDependencyFiles_NoDependencyManifest_OtherFilesUnaffected(t *testing.T) {
-dir := t.TempDir()
-files := []File{
-{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
-{Path: ".github/skills/feature-workflow/SKILL.md", Data: []byte("# Feature\n")},
-{Path: ".github/agents/coder.agent.md", Data: []byte("# Coder\n")},
+	dir := t.TempDir()
+	files := []File{
+		{Path: ".github/skills/dependency-update/SKILL.md", Data: []byte("# Dep Update\n")},
+		{Path: ".github/skills/feature-workflow/SKILL.md", Data: []byte("# Feature\n")},
+		{Path: ".github/agents/coder.agent.md", Data: []byte("# Coder\n")},
+	}
+	got := filterDependencyFiles(files, dir)
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if paths[".github/skills/dependency-update/SKILL.md"] {
+		t.Error("dependency-update SKILL.md should be removed")
+	}
+	if !paths[".github/skills/feature-workflow/SKILL.md"] {
+		t.Error("feature-workflow SKILL.md should be retained")
+	}
+	if !paths[".github/agents/coder.agent.md"] {
+		t.Error("coder.agent.md should be retained")
+	}
 }
-got := filterDependencyFiles(files, dir)
-paths := make(map[string]bool)
-for _, f := range got {
-paths[f.Path] = true
+
+// -- filterAPIAgentFiles --
+
+func TestFilterAPIAgentFiles_NoAPIMarkers_AgentRemoved(t *testing.T) {
+	dir := t.TempDir()
+	// No API markers in dir.
+	files := []File{
+		{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+		{Path: ".github/agents/coder.agent.md", Data: []byte("# Coder\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterAPIAgentFiles(files, dir)
+	for _, f := range got {
+		if f.Path == ".github/agents/api-agent.agent.md" {
+			t.Error("api-agent.agent.md should be removed when no API markers are present")
+		}
+	}
+	// Other agent files must still be present.
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if !paths[".github/agents/coder.agent.md"] {
+		t.Error("coder.agent.md should not be removed")
+	}
+	if !paths[".editorconfig"] {
+		t.Error(".editorconfig should not be removed")
+	}
 }
-if paths[".github/skills/dependency-update/SKILL.md"] {
-t.Error("dependency-update SKILL.md should be removed")
+
+func TestFilterAPIAgentFiles_WithOpenAPISpec_AgentRetained(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "openapi.yaml"), []byte("openapi: 3.0.0\n"), 0o644); err != nil {
+		t.Fatalf("write openapi.yaml: %v", err)
+	}
+	files := []File{
+		{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+		{Path: ".editorconfig", Data: []byte("root = true\n")},
+	}
+	got := filterAPIAgentFiles(files, dir)
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if !paths[".github/agents/api-agent.agent.md"] {
+		t.Error("api-agent.agent.md should be retained when openapi.yaml is present")
+	}
 }
-if !paths[".github/skills/feature-workflow/SKILL.md"] {
-t.Error("feature-workflow SKILL.md should be retained")
+
+func TestFilterAPIAgentFiles_WithSwaggerJSON_AgentRetained(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "swagger.json"), []byte(`{"swagger":"2.0"}`), 0o644); err != nil {
+		t.Fatalf("write swagger.json: %v", err)
+	}
+	files := []File{
+		{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+	}
+	got := filterAPIAgentFiles(files, dir)
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if !paths[".github/agents/api-agent.agent.md"] {
+		t.Error("api-agent.agent.md should be retained when swagger.json is present")
+	}
 }
-if !paths[".github/agents/coder.agent.md"] {
-t.Error("coder.agent.md should be retained")
+
+func TestFilterAPIAgentFiles_WithAPIDirectory_AgentRetained(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "api"), 0o755); err != nil {
+		t.Fatalf("mkdir api/: %v", err)
+	}
+	files := []File{
+		{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+	}
+	got := filterAPIAgentFiles(files, dir)
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if !paths[".github/agents/api-agent.agent.md"] {
+		t.Error("api-agent.agent.md should be retained when api/ directory is present")
+	}
 }
+
+func TestFilterAPIAgentFiles_WithRoutesDirectory_AgentRetained(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "routes"), 0o755); err != nil {
+		t.Fatalf("mkdir routes/: %v", err)
+	}
+	files := []File{
+		{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+	}
+	got := filterAPIAgentFiles(files, dir)
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if !paths[".github/agents/api-agent.agent.md"] {
+		t.Error("api-agent.agent.md should be retained when routes/ directory is present")
+	}
+}
+
+func TestFilterAPIAgentFiles_OtherAgentsUnaffected(t *testing.T) {
+	dir := t.TempDir()
+	// No API markers.
+	files := []File{
+		{Path: ".github/agents/api-agent.agent.md", Data: []byte("# API Agent\n")},
+		{Path: ".github/agents/coder.agent.md", Data: []byte("# Coder\n")},
+		{Path: ".github/agents/tester.agent.md", Data: []byte("# Tester\n")},
+		{Path: ".github/skills/feature-workflow/SKILL.md", Data: []byte("# Feature\n")},
+	}
+	got := filterAPIAgentFiles(files, dir)
+	paths := make(map[string]bool)
+	for _, f := range got {
+		paths[f.Path] = true
+	}
+	if paths[".github/agents/api-agent.agent.md"] {
+		t.Error("api-agent.agent.md should be removed")
+	}
+	if !paths[".github/agents/coder.agent.md"] {
+		t.Error("coder.agent.md should be retained")
+	}
+	if !paths[".github/agents/tester.agent.md"] {
+		t.Error("tester.agent.md should be retained")
+	}
+	if !paths[".github/skills/feature-workflow/SKILL.md"] {
+		t.Error("feature-workflow SKILL.md should be retained")
+	}
+}
+
+func TestInstall_WithOpenAPISpec_APIAgentInstalled(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "openapi.yaml"), []byte("openapi: 3.0.0\n"), 0o644); err != nil {
+		t.Fatalf("write openapi.yaml: %v", err)
+	}
+
+	tb := makeTarball(testPrefix, map[string]string{
+		".github/agents/api-agent.agent.md": "# API Agent\n",
+		".editorconfig":                     "root = true\n",
+	})
+	if err := serveAndInstall(t, dir, tb); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	agentPath := filepath.Join(dir, ".github", "agents", "api-agent.agent.md")
+	if _, err := os.Stat(agentPath); err != nil {
+		t.Errorf("api-agent.agent.md should be installed in API project: %v", err)
+	}
+}
+
+func TestInstall_WithoutAPIMarkers_APIAgentNotInstalled(t *testing.T) {
+	dir := t.TempDir()
+	// No API markers — pure database or docs project.
+
+	tb := makeTarball(testPrefix, map[string]string{
+		".github/agents/api-agent.agent.md": "# API Agent\n",
+		".editorconfig":                     "root = true\n",
+	})
+	if err := serveAndInstall(t, dir, tb); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	agentPath := filepath.Join(dir, ".github", "agents", "api-agent.agent.md")
+	if _, err := os.Stat(agentPath); !os.IsNotExist(err) {
+		t.Error("api-agent.agent.md should NOT be installed in non-API project")
+	}
+}
+
+func TestUpdate_WithAPIDirectory_APIAgentInstalled(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "api"), 0o755); err != nil {
+		t.Fatalf("mkdir api/: %v", err)
+	}
+
+	tb1 := makeTarball(testPrefix, map[string]string{
+		".editorconfig": "v1\n",
+	})
+	if err := serveAndInstall(t, dir, tb1); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
+	tb2 := makeTarball(newPrefix, map[string]string{
+		".editorconfig":                     "v2\n",
+		".github/agents/api-agent.agent.md": "# API Agent\n",
+	})
+	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	agentPath := filepath.Join(dir, ".github", "agents", "api-agent.agent.md")
+	if _, err := os.Stat(agentPath); err != nil {
+		t.Errorf("api-agent.agent.md should be installed when api/ directory is present during update: %v", err)
+	}
+}
+
+func TestUpdate_WithoutAPIMarkers_APIAgentNotInstalled(t *testing.T) {
+	dir := t.TempDir()
+	// No api/ directory or spec files.
+
+	tb1 := makeTarball(testPrefix, map[string]string{
+		".editorconfig": "v1\n",
+	})
+	if err := serveAndInstall(t, dir, tb1); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	const newPrefix = "JoshLuedeman-teamwork-def5678def5678/"
+	tb2 := makeTarball(newPrefix, map[string]string{
+		".editorconfig":                     "v2\n",
+		".github/agents/api-agent.agent.md": "# API Agent\n",
+	})
+	if err := serveAndUpdate(t, dir, tb2, false); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	agentPath := filepath.Join(dir, ".github", "agents", "api-agent.agent.md")
+	if _, err := os.Stat(agentPath); !os.IsNotExist(err) {
+		t.Error("api-agent.agent.md should NOT be installed when no API markers are present during update")
+	}
 }

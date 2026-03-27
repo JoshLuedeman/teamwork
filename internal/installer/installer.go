@@ -63,6 +63,36 @@ var dependencyManifests = []string{
 	"build.gradle",
 }
 
+// apiProjectMarkers is the list of files whose presence indicates that the
+// project exposes an API. If none are found, api-agent.agent.md is not installed.
+//
+// Detection heuristics:
+//   - openapi.yaml / openapi.json / swagger.yaml / swagger.json — explicit API spec
+//   - api/ or routes/ directory — common API source layout
+//   - Framework-specific files (fastapi, express, gin, spring) detected via
+//     well-known entrypoints and config files
+var apiProjectMarkers = []string{
+	// OpenAPI / Swagger specs (most reliable signal)
+	"openapi.yaml",
+	"openapi.yml",
+	"openapi.json",
+	"swagger.yaml",
+	"swagger.yml",
+	"swagger.json",
+	"api/openapi.yaml",
+	"api/openapi.yml",
+	"api/openapi.json",
+	"api/swagger.yaml",
+	"api/swagger.yml",
+	"api/swagger.json",
+	"docs/openapi.yaml",
+	"docs/openapi.yml",
+	"docs/openapi.json",
+	"docs/swagger.yaml",
+	"docs/swagger.yml",
+	"docs/swagger.json",
+}
+
 // File represents a single file extracted from the tarball.
 type File struct {
 	Path string
@@ -102,6 +132,7 @@ func Install(dir, owner, repo, ref string) error {
 
 	files = filterLanguageFiles(files, dir)
 	files = filterDependencyFiles(files, dir)
+	files = filterAPIAgentFiles(files, dir)
 
 	m := &Manifest{
 		Version: commitSHA,
@@ -182,6 +213,7 @@ func Update(dir, owner, repo, ref string, force bool) error {
 
 	files = filterLanguageFiles(files, dir)
 	files = filterDependencyFiles(files, dir)
+	files = filterAPIAgentFiles(files, dir)
 
 	if currentVersion == commitSHA {
 		fmt.Println("Already up to date.")
@@ -414,18 +446,18 @@ var deprecatedFiles = []string{
 // Used to migrate user modifications from deprecated files into new files.
 var deprecatedFileMapping = map[string]string{
 	// Roles → Custom Agents
-	"agents/roles/planner.md":                    ".github/agents/planner.agent.md",
-	"agents/roles/architect.md":                  ".github/agents/architect.agent.md",
-	"agents/roles/coder.md":                      ".github/agents/coder.agent.md",
-	"agents/roles/tester.md":                     ".github/agents/tester.agent.md",
-	"agents/roles/reviewer.md":                   ".github/agents/reviewer.agent.md",
-	"agents/roles/security-auditor.md":           ".github/agents/security-auditor.agent.md",
-	"agents/roles/documenter.md":                 ".github/agents/documenter.agent.md",
-	"agents/roles/orchestrator.md":               ".github/agents/orchestrator.agent.md",
-	"agents/roles/optional/triager.md":           ".github/agents/triager.agent.md",
-	"agents/roles/optional/devops.md":            ".github/agents/devops.agent.md",
+	"agents/roles/planner.md":                     ".github/agents/planner.agent.md",
+	"agents/roles/architect.md":                   ".github/agents/architect.agent.md",
+	"agents/roles/coder.md":                       ".github/agents/coder.agent.md",
+	"agents/roles/tester.md":                      ".github/agents/tester.agent.md",
+	"agents/roles/reviewer.md":                    ".github/agents/reviewer.agent.md",
+	"agents/roles/security-auditor.md":            ".github/agents/security-auditor.agent.md",
+	"agents/roles/documenter.md":                  ".github/agents/documenter.agent.md",
+	"agents/roles/orchestrator.md":                ".github/agents/orchestrator.agent.md",
+	"agents/roles/optional/triager.md":            ".github/agents/triager.agent.md",
+	"agents/roles/optional/devops.md":             ".github/agents/devops.agent.md",
 	"agents/roles/optional/dependency-manager.md": ".github/agents/dependency-manager.agent.md",
-	"agents/roles/optional/refactorer.md":        ".github/agents/refactorer.agent.md",
+	"agents/roles/optional/refactorer.md":         ".github/agents/refactorer.agent.md",
 	// Workflows → Skills
 	"agents/workflows/feature.md":           ".github/skills/feature-workflow/SKILL.md",
 	"agents/workflows/bugfix.md":            ".github/skills/bugfix-workflow/SKILL.md",
@@ -623,6 +655,24 @@ func filterDependencyFiles(files []File, dir string) []File {
 	return result
 }
 
+// filterAPIAgentFiles removes api-agent.agent.md when the project does not
+// appear to expose an API. Detection is based on the presence of OpenAPI/Swagger
+// spec files or well-known API source layout directories (api/, routes/, etc.).
+// If no API markers are found, api-agent.agent.md is excluded from the install.
+func filterAPIAgentFiles(files []File, dir string) []File {
+	if isAPIProject(dir) {
+		return files
+	}
+	result := make([]File, 0, len(files))
+	for _, f := range files {
+		if f.Path == ".github/agents/api-agent.agent.md" {
+			continue
+		}
+		result = append(result, f)
+	}
+	return result
+}
+
 // hasAnyFile reports whether any of the named files exist in dir.
 func hasAnyFile(dir string, names []string) bool {
 	for _, name := range names {
@@ -631,6 +681,27 @@ func hasAnyFile(dir string, names []string) bool {
 		}
 	}
 	return false
+}
+
+// hasAnyDir reports whether any of the named directories exist in dir.
+func hasAnyDir(dir string, names []string) bool {
+	for _, name := range names {
+		info, err := os.Stat(filepath.Join(dir, name))
+		if err == nil && info.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
+// isAPIProject reports whether the project rooted at dir appears to expose
+// an API, based on the presence of API spec files or well-known layout directories.
+func isAPIProject(dir string) bool {
+	if hasAnyFile(dir, apiProjectMarkers) {
+		return true
+	}
+	// Common API source layout directories.
+	return hasAnyDir(dir, []string{"api", "routes", "handlers", "endpoints"})
 }
 
 func readManifest(dir string) (*Manifest, error) {

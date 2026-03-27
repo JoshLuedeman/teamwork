@@ -414,6 +414,100 @@ Projects can skip gates, add gates, or modify gate behavior in `.teamwork/config
 
 ---
 
+## Multi-Agent PR Review Sequence
+
+When a PR is ready for review, three roles execute sequentially in a fixed order: **Tester → Security Auditor → Reviewer**. Each role reads the prior role's output before beginning its own work.
+
+### Sequence
+
+```
+Coder opens PR
+      │
+      ▼
+   Tester  ──────────────────────────────────────────────────────┐
+   Verifies acceptance criteria, edge cases, and coverage.        │
+   Posts coverage summary as PR comment.                          │
+      │                                                           │
+      ▼                                                           │
+Security Auditor  ─────────────────────────────────────────────┐ │
+   Reads Tester's coverage summary.                              │ │
+   Scans for vulnerabilities; posts security findings table.     │ │
+      │                                                           │ │
+      ▼                                                           │ │
+   Reviewer  ──────────────────────────────────────────────────┘ ┘
+   Reads both prior reports before starting.
+   Reviews code quality, correctness, and standards.
+   Does NOT re-perform security analysis.
+   Posts GitHub review: approved or changes requested.
+```
+
+### Role Boundaries Within the Sequence
+
+| Role | Does | Does Not |
+|------|------|----------|
+| **Tester** | Verifies acceptance criteria; writes missing edge-case tests; posts coverage summary | Evaluate code quality; assess security vulnerabilities |
+| **Security Auditor** | Scans for vulnerabilities; reads Tester's coverage summary to understand what's already tested | Evaluate code quality; re-run functional tests |
+| **Reviewer** | Reviews code quality, correctness, standards, and test sufficiency; reads both prior reports | Re-perform security analysis; re-run the Tester's verification |
+
+### Conflict Resolution
+
+When two roles in the sequence reach different conclusions about the same file or line:
+
+1. **Later role defers to the earlier role's specialized finding.** If the Security Auditor flagged a line as a vulnerability, the Reviewer does not override that finding — the Reviewer may note it as context but cannot clear it.
+2. **Ambiguous conflicts escalate to the Orchestrator**, which routes to the appropriate specialist role. If still unresolved, the Orchestrator escalates to the human.
+3. **Each role documents its own scope.** If a role decides not to repeat a finding already covered by an earlier role, it notes this explicitly (e.g., "Security findings deferred to Security Auditor report above").
+
+### What This Means in Practice
+
+- The Reviewer reads the Tester's report and the Security Auditor's report before posting any comments.
+- If the Security Auditor posts "No findings", the Reviewer trusts that and does not add security comments of its own.
+- If the Tester posts "Coverage at 82%, missing branch in error handler", the Security Auditor notes this as a relevant risk signal before scanning.
+- The Reviewer is the final gate before human approval — but the Reviewer's job is code quality and standards, not repeating the work of the two prior roles.
+
+---
+
+## Agent Escalation Matrix
+
+When a role encounters a problem it cannot resolve alone, it escalates to a specific agent — not to the human by default. The human is the last resort, not the first call. This matrix defines who calls whom.
+
+### Escalation Routes by Role
+
+| Role | Situation | Escalate To | Human if... |
+|------|-----------|-------------|-------------|
+| **Coder** | Discovers a design issue blocking implementation | Architect | Architect cannot resolve within 1 cycle |
+| **Coder** | Discovers an out-of-scope bug during implementation | File issue → notify Planner | Never (file the issue and move on) |
+| **Coder** | Needs a new dependency not covered by existing ADRs | Architect | Architect approves but technology is outside the team's expertise |
+| **Tester** | Finds a defect in the code under test | Report via PR comment → Coder | Defect is a fundamental design flaw |
+| **Tester** | Finds a design-level defect (not a bug in the code) | Architect | Architect and Coder cannot agree on resolution |
+| **Security Auditor** | Finds a critical or high severity vulnerability | Coder (for remediation) | Fix requires architectural change |
+| **Security Auditor** | Suspects a security incident (leaked credentials, evidence of breach) | Human immediately | — (always human) |
+| **Reviewer** | Encounters a pattern not covered by conventions or ADRs | Architect | Architect's guidance would require an ADR or significant rework |
+| **Reviewer** | Disagrees with Coder's approach after feedback exchange | Architect (tiebreaker) | Architect cannot determine the right answer |
+| **Planner** | Goal is ambiguous and cannot be reasonably interpreted | Human | — (always human for product decisions) |
+| **Planner** | Dependency graph is circular and cannot be resolved by redefining tasks | Human | — |
+| **Architect** | Needs an infrastructure or deployment decision | DevOps agent (if active) | DevOps is not active or cannot resolve |
+| **Architect** | Needs to make a choice between two roughly equal tradeoffs | Human | — (always human for major tradeoff calls) |
+| **Documenter** | Conflict between what the code does and what existing docs say | Coder (to clarify intent) | Coder and docs conflict cannot be resolved |
+| **Any role** | Workflow routing question | Orchestrator | Orchestrator cannot map the situation to a known workflow |
+| **Any role** | Unresolved agent-to-agent escalation after 1 cycle | Human | — (fallback for all unresolved escalations) |
+
+### Escalation Protocol
+
+When a role escalates, it must:
+
+1. **Specify the exact question or decision needed** — not "I'm stuck" but "I need the Architect to decide whether to use interface injection or constructor injection for the auth middleware, given ADR-004 and the existing pattern in `pkg/auth/`."
+2. **Provide full context** — include the relevant code, the options considered, and why the role cannot resolve this alone.
+3. **Record the escalation in the handoff artifact** under "Open Questions or Risks" and in the metrics log with action `escalate`.
+4. **Set the workflow to `blocked`** (via the Orchestrator) until the escalation is resolved.
+
+### What Escalation Is Not
+
+- Escalation is not asking for approval on every decision — roles have autonomy within their scope.
+- Escalation is not delegating work — the escalating role resumes the task once the question is answered.
+- Escalation is not a substitute for reading the existing ADRs and conventions — check those first.
+
+---
+
 ## Multi-Repo Coordination
 
 Teamwork supports coordinating work across multiple repositories using a **hub-and-spoke model**.

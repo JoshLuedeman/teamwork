@@ -30,8 +30,8 @@ A refactoring need is identified through one of:
 | 1 | **Human / Reviewer / Refactorer** | Identifies the refactoring need — describes problem, affected areas, desired end state | Code smell, tech debt, friction | Refactoring request with problem, affected files, desired outcome | Problem clearly stated; affected area identified |
 | 2 | **Architect** | Defines scope, approach, and constraints; validates target design is sound | Refactoring request, architecture docs | Approach document: target design, scope, constraints, risks | Approach is sound; scope bounded; no conflict with in-flight work |
 | 3 | **Planner** | Breaks refactoring into safe incremental steps, each independently merge-safe | Approach document, dependencies | Ordered task list with per-step acceptance criteria | Each step has criteria; tests pass after each; no big-bang merge |
-| 4 | **Coder** | Implements each step, updates tests, ensures all tests pass after each step | Task list, approach, conventions | PR(s) per step with all tests passing, linked to tasks | Tests pass; no behavior changes; code follows conventions |
-| 5 | **Tester** | Validates behavior is unchanged, adds tests if coverage is insufficient | PR, acceptance criteria, pre-refactor results | Validation report, additional tests, equivalence confirmation | Pre-existing tests pass; new tests cover undertested paths |
+| 4 | **Coder** | Implements each step, updates tests, ensures all tests pass after each step | Task list, approach, conventions | PR(s) per step with all tests passing (or manual equivalence verification if no test suite), linked to tasks | If test suite exists: tests pass after each step; no behavior changes. If not: manual equivalence checks documented per step |
+| 5 | **Tester** | Validates behavior is unchanged, adds tests if coverage is insufficient | PR, acceptance criteria, pre-refactor results | Validation report, additional tests or manual equivalence confirmation | If test suite exists: pre-existing tests pass; new tests cover undertested paths. If not: manual equivalence verification report produced |
 | 6 | **Reviewer** | Reviews for correctness, verifies no behavior changed, checks goal is achieved | PR, approach document, test report | Review decision, review comments | Goal achieved; no behavior changes; PR approved |
 | 7 | **Human** | Approves and merges the PR | Approved PR | Merged refactoring on target branch | Code merged; CI passes on target branch |
 | 8 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
@@ -77,9 +77,10 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 
 ## Completion Criteria
 
-- All refactoring steps are implemented, tested, reviewed, and merged.
+- All refactoring steps are implemented, tested (or manually verified for behavioral equivalence if no test suite exists), reviewed, and merged.
 - All pre-existing tests pass without modification to their assertions (test structure may
-  change, but expected behavior must not).
+  change, but expected behavior must not). If no test suite exists, behavioral equivalence
+  is confirmed by manual verification documented in the handoff artifacts.
 - The refactoring achieves the goal stated in the original request.
 - No external behavior has changed — inputs produce the same outputs as before.
 
@@ -94,6 +95,9 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - **Test-first verification**: Before starting the refactoring, the Tester should confirm
   existing test coverage is sufficient to detect behavior changes. If coverage is
   insufficient, add tests first as a separate preliminary step before structural changes.
+  If the project has no test suite, the Tester must instead establish a manual baseline:
+  document the inputs, outputs, and observable behavior of the code being refactored before
+  any changes are made, so equivalence can be verified afterward.
 - **Scope discipline**: If the Coder discovers additional refactoring opportunities during
   implementation, file them as separate requests. Do not expand scope mid-workflow — this
   is the most common cause of refactoring failures.

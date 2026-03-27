@@ -14,6 +14,9 @@ You are the Architect. You make design decisions that shape the system's structu
 <!-- CUSTOMIZE: Replace the placeholders below with your project's details -->
 - **Tech Stack:** [e.g., React 18, TypeScript, Node.js 20, PostgreSQL 16]
 - **Languages:** [e.g., TypeScript, Go, Python]
+- **ADR Location:** [e.g., `.teamwork/docs/decisions/` or `docs/adr/`]
+- **Key Architectural Constraints:** [e.g., must remain stateless; no direct DB access from frontend; all external calls go through the API gateway]
+- **Existing Patterns to Follow:** [e.g., repository pattern for data access; middleware chain for HTTP handlers; error wrapping with `fmt.Errorf("%w")`]
 
 ## Model Requirements
 

@@ -26,8 +26,8 @@ a clear goal statement and any known constraints or requirements.
 | 1 | **Human** | Creates feature request with goal, context, and constraints | Product need or idea | Feature request with goal statement and constraints | Goal is clearly stated; enough context for planning |
 | 2 | **Planner** | Decomposes goal into tasks with acceptance criteria, dependencies, and complexity estimates | Feature request | Task issues, dependency graph, milestone grouping | Every task has acceptance criteria; dependencies form a valid DAG |
 | 3 | **Architect** | Reviews tasks for feasibility, makes design decisions, creates ADR if needed | Task list, dependency graph | Feasibility assessment, design decisions, ADR (if needed) | All tasks validated as feasible; decisions documented |
-| 4 | **Coder** | Implements each task in dependency order, writes tests, opens PR | Validated tasks, design decisions, conventions | PR(s) with code, tests, linked issues, passing CI | Code satisfies acceptance criteria; tests pass |
-| 5 | **Tester** | Reviews coverage, writes edge-case tests, validates against acceptance criteria | PR, acceptance criteria | Additional tests, coverage report, defect reports | Acceptance criteria verified; edge cases covered |
+| 4 | **Coder** | Implements each task in dependency order, writes tests, opens PR | Validated tasks, design decisions, conventions | PR(s) with code, tests, linked issues, CI passing (if CI exists) | Code satisfies acceptance criteria; tests pass if test infrastructure exists; manual verification documented if not |
+| 5 | **Tester** | Reviews coverage, writes edge-case tests, validates against acceptance criteria | PR, acceptance criteria | Additional tests, coverage report, defect reports | Acceptance criteria verified; edge cases covered; if no test suite, manual verification steps documented |
 | 6 | **Security Auditor** | Scans PR for vulnerabilities, secrets, unsafe dependencies | PR diff, dependency manifest | Security findings (severity, location, remediation) | No high/critical findings unresolved |
 | 7 | **Reviewer** | Reviews for correctness, quality, standards, test sufficiency | PR, acceptance criteria, security findings | Review decision, review comments | PR approved or actionable change requests given |
 | 8 | **Human** | Approves and merges the PR | Approved PR, review summary | Merged code on target branch | Code merged; CI passes on target branch |
@@ -53,8 +53,8 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - ADR file in `.teamwork/docs/decisions/` (if the feature introduces new patterns)
 
 **Coder → Tester**
-- Open PR with implementation and initial tests
-- PR linked to task issues; CI passing
+- Open PR with implementation and initial tests (or manual verification notes if no test infrastructure exists)
+- PR linked to task issues; CI passing (if CI exists)
 
 **Tester → Security Auditor**
 - PR branch with complete test suite committed
@@ -72,7 +72,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 
 ## Completion Criteria
 
-- All tasks from the plan are implemented, tested, reviewed, and merged.
+- All tasks from the plan are implemented, tested (or manually verified if no test suite exists), reviewed, and merged.
 - No unresolved security findings at high or critical severity.
 - Documentation is updated to reflect the new feature.
 - Changelog entry exists for the feature.
@@ -102,3 +102,8 @@ The orchestrator validates each handoff artifact before dispatching the next rol
   quality gate fails, the orchestrator keeps the workflow at the current step and notifies
   the responsible role. If a blocker is raised, the orchestrator sets the workflow to
   `blocked` and escalates to the human.
+- **Projects without a test suite:** If the project has no test infrastructure, steps 4 and 5
+  adapt as follows: the Coder documents manual verification steps and their results in the
+  handoff artifact; the Tester performs structured manual testing using the acceptance criteria
+  as a checklist and documents each step and outcome. This is not a permanent exemption —
+  the Planner or Architect should track adding test infrastructure as a follow-up task.

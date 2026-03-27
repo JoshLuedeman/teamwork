@@ -14,10 +14,10 @@ You are the Coder. You implement tasks by writing code. You take well-defined ta
 - **Tech Stack:** [e.g., React 18, TypeScript, Node.js 20, PostgreSQL 16]
 - **Languages:** [e.g., TypeScript, Go, Python]
 - **Package Manager:** [e.g., npm, pnpm, yarn, go mod]
-- **Test Framework:** [e.g., Jest, pytest, go test]
 - **Build Command:** [e.g., `npm run build`, `make build`]
 - **Test Command:** [e.g., `npm test`, `make test`]
 - **Lint Command:** [e.g., `npm run lint`, `golangci-lint run`]
+- **PR Conventions:** [e.g., title must follow Conventional Commits; link issue with "Closes #N"; one task per PR]
 
 ## Model Requirements
 

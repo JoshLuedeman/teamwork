@@ -25,7 +25,7 @@ or production monitoring with clear evidence that production is impacted right n
 |---|------|--------|--------|---------|------------------|
 | 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Reports production incident with symptoms, impact scope, and affected systems | Production alert, user reports | Incident report with severity, impact scope, symptoms | Impact is clear; affected system identified |
-| 2 | **Coder** | Implements the minimal fix — smallest change that resolves the incident — and writes a regression test | Incident report, production logs | PR with minimal fix and regression test | Fix addresses the symptom; regression test passes; scope is minimal |
+| 2 | **Coder** | Implements the minimal fix — smallest change that resolves the incident — and writes a regression test if test infrastructure exists | Incident report, production logs | PR with minimal fix (and regression test if test infra exists) | Fix addresses the symptom; scope is minimal; regression test passes or manual repro evidence documented |
 | 3 | **Tester** | Validates the fix resolves the incident without introducing new regressions | PR, incident report, repro steps | Validation results, smoke test confirmation | Incident resolved; no new regressions |
 | 4 | **Security Auditor** | Quick-checks the fix for security implications — was the bug exploitable? Does the fix open new surface? | PR diff, incident report | Security quick-check summary | No new vulnerabilities introduced; exploitability assessed |
 | 5 | **Reviewer** | Fast-track review — correctness and safety only, not style or structure | PR, security summary, incident report | Review decision (approve or block with reason) | Fix is correct and safe to deploy |
@@ -45,9 +45,10 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - Known workarounds (if any) to inform fix approach
 
 **Coder → Tester**
-- Open PR with the minimal fix and at least one regression test
+- Open PR with the minimal fix and at least one regression test (if test infrastructure exists)
+- If no test infrastructure: manual repro steps and verification evidence documented in the PR description
 - PR description explicitly states this is a hotfix and references the incident
-- CI passing on the PR branch
+- CI passing on the PR branch (if CI exists)
 
 **Tester → Security Auditor**
 - PR comment confirming the fix resolves the reported incident

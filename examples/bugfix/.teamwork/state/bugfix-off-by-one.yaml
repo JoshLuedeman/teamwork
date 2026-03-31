@@ -1,0 +1,33 @@
+id: bugfix/off-by-one
+type: bugfix
+status: completed
+goal: "Fix off-by-one error in counter.Sum — the loop starts at index 1 and skips the first element"
+current_step: 4
+current_role: reviewer
+steps:
+  - step: 1
+    role: human
+    action: start
+    started: "2025-02-03T14:00:00Z"
+    completed: "2025-02-03T14:01:00Z"
+  - step: 2
+    role: coder
+    action: implement
+    started: "2025-02-03T14:01:00Z"
+    completed: "2025-02-03T14:22:00Z"
+    quality_gate: passed
+  - step: 3
+    role: tester
+    action: test
+    started: "2025-02-03T14:23:00Z"
+    completed: "2025-02-03T14:35:00Z"
+    quality_gate: passed
+  - step: 4
+    role: reviewer
+    action: review
+    started: "2025-02-03T14:36:00Z"
+    completed: "2025-02-03T14:44:00Z"
+    quality_gate: passed
+created_at: "2025-02-03T14:00:00Z"
+updated_at: "2025-02-03T14:44:00Z"
+created_by: human

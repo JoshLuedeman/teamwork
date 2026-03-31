@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/joshluedeman/teamwork/internal/config"
@@ -29,6 +30,7 @@ func init() {
 	updateCmd.Flags().String("ref", "main", "Git ref to update to (branch, tag, or SHA)")
 	updateCmd.Flags().Bool("force", false, "Overwrite user-modified files without warning")
 	updateCmd.Flags().Bool("create-issue", true, "Create a GitHub issue assigned to Copilot for setup when placeholders are detected")
+	updateCmd.Flags().Bool("check", false, "Check for drift between local files and upstream without writing any changes (exits 1 if drift detected)")
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
@@ -52,10 +54,28 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	check, err := cmd.Flags().GetBool("check")
+	if err != nil {
+		return err
+	}
 
 	owner, repo, err := parseUpdateSource(source)
 	if err != nil {
 		return err
+	}
+
+	// --check mode: report drift without writing any files.
+	if check {
+		report, err := installer.CheckDrift(dir, owner, repo, ref)
+		if err != nil {
+			return fmt.Errorf("checking drift: %w", err)
+		}
+		printDriftReport(report)
+		if report.HasDrift() {
+			// Exit 1 to signal drift to CI pipelines.
+			os.Exit(1)
+		}
+		return nil
 	}
 
 	if err := installer.Update(dir, owner, repo, ref, force); err != nil {
@@ -159,4 +179,26 @@ func parseUpdateSource(source string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid --source format %q: expected owner/repo", source)
 	}
 	return parts[0], parts[1], nil
+}
+
+// printDriftReport prints a human-readable drift report to stdout.
+func printDriftReport(report *installer.DriftReport) {
+if !report.HasDrift() {
+fmt.Println("No drift detected. Framework files are up to date.")
+return
+}
+
+total := len(report.ModifiedLocally) + len(report.AddedUpstream) + len(report.DeletedLocally)
+fmt.Printf("Drift detected (%d file(s)):\n", total)
+for _, f := range report.ModifiedLocally {
+fmt.Printf("  modified locally:  %s\n", f)
+}
+for _, f := range report.AddedUpstream {
+fmt.Printf("  added upstream:    %s\n", f)
+}
+for _, f := range report.DeletedLocally {
+fmt.Printf("  deleted locally:   %s\n", f)
+}
+fmt.Println()
+fmt.Println("Run 'teamwork update' to apply upstream changes.")
 }

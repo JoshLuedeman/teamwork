@@ -495,3 +495,48 @@ Quality gates are enforced by the orchestrator at each role transition. The gate
 | **Escalated** | Status → `blocked`; human must decide |
 
 Gate checks can be customized per project via `config.yaml` `quality_gates` and `workflows.extra_gates`. See `docs/protocols.md` for the full configuration schema.
+
+## Checkpointing
+
+Teamwork supports mid-workflow checkpoints to allow safe resumption after interruption. A checkpoint records the current step, recent context, and outstanding decisions at the moment it is saved.
+
+### When Checkpoints Are Created
+
+Checkpoints are written automatically by the orchestrator when:
+- A workflow step is blocked and the orchestrator suspends work
+- An escalation requires human intervention before the workflow can continue
+- An agent explicitly requests a checkpoint before ending its session
+
+Checkpoints are stored at `.teamwork/state/<workflow-id>.checkpoint.yaml`.
+
+### Checkpoint Contents
+
+| Field | Description |
+|-------|-------------|
+| `workflow_id` | Identifier of the paused workflow |
+| `step` | Step number where work was interrupted |
+| `role` | Role that was active when the checkpoint was saved |
+| `summary` | Brief summary of work completed so far |
+| `outstanding` | List of decisions or actions still needed to resume |
+| `saved_at` | RFC 3339 timestamp of when the checkpoint was created |
+
+### Resuming from a Checkpoint
+
+```bash
+# Inspect a checkpoint before resuming
+teamwork resume <workflow-id>
+
+# Clear a stale checkpoint without resuming
+teamwork resume <workflow-id> --clear
+```
+
+The `resume` command prints the checkpoint summary and outstanding items so the next agent (or human) knows exactly where to pick up. After addressing the outstanding items, run `teamwork approve <id>` to advance the workflow normally.
+
+### Checkpoint Lifecycle
+
+```
+active → [interruption] → checkpoint saved → [resume] → active
+                                           → [--clear] → checkpoint deleted
+```
+
+Checkpoints are automatically deleted when the workflow advances past the checkpointed step via `approve` or `complete`.

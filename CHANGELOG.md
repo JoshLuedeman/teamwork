@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.7.0] — 2026-03-31
+
+### Added
+
+- **Pluggable quality gate hooks** — `NewEngine` now wires `GateRunner` so `extra_gates` in config actually execute. Added `quality_gates.custom` config schema (`name`, `command`, `on_step`) for project-defined gate scripts. (#115, PR #194)
+- **Secrets scanning quality gate** — Built-in `secrets_scan` gate tries `gitleaks`, `detect-secrets`, and `trufflehog` in order; enforced at Coder→Tester and Security Auditor handoffs. New `teamwork scan` command for on-demand scanning. (#46, PR #194)
+- **Workflow timeline visualization** — `teamwork timeline <workflow-id>` renders ASCII table (step, role, status, duration, handoff) with ANSI colors. `--mermaid` flag emits a Mermaid Gantt diagram. (#116, PR #194)
+- **Workflow checkpointing and resume** — Checkpoint state saved to `.teamwork/state/.checkpoint-<id>.yaml` on step advance; cleared on successful completion. New `teamwork resume <workflow-id>` command surfaces saved context; `--clear` deletes checkpoint. (#39, PR #194)
+- **Role-specific handoff templates** — `teamwork next` shows the template path for the current step transition. `teamwork handoff init <workflow-id>` writes a pre-structured Markdown template with role-appropriate sections (e.g., Coder→Tester includes "Files Changed", "How to Test", "Edge Cases"). (#118, PR #195)
+- **Full-text search** — `teamwork search <query>` searches memory entries, handoff artifacts, ADRs, and state files. `--domain` and `--type` filters narrow results. Returns ranked results with snippets. (#41, PR #195)
+- **Structured feedback loop** — Reviewer handoffs containing "changes requested" auto-append entries to `.teamwork/memory/feedback.yaml`. `teamwork feedback list [--domain] [--status]` and `teamwork feedback resolve <id>` manage the loop. `teamwork next` surfaces open feedback to Coder steps. (#44, PR #195)
+- **Workflow analytics** — `teamwork analytics summary [--since] [--type] [--format json]` aggregates all state files: total/completed/failed/active counts, per-type avg duration, quality gate pass rate, and escalation rate. (#61, PR #195)
+- **Agent performance scorecards** — `teamwork metrics agents [--since] [--format json]` shows per-role pass rate, rework count, and avg step duration. (#119, PR #195)
+- **Context distillation** — `teamwork context <workflow-id> [--step N]` assembles a focused Markdown context package: role file, previous handoff, relevant memory entries, relevant ADRs, workflow status, and open feedback. Logs token estimate to metrics. (#62, PR #195)
+- **Configuration drift detection** — `teamwork update --check` dry-runs an update, comparing local SHA-256 hashes against the upstream manifest and reporting modified, added, and deleted files without writing anything. Exits 1 if drift detected. (#124, PR #196)
+- **Exportable workflow reports** — `teamwork report <workflow-id> --format md|html|json` generates a comprehensive report: timeline, step durations, handoff summaries, gate results, and cost estimate. (#123, PR #196)
+- **Example projects** — `examples/minimal/` (complete feature workflow) and `examples/bugfix/` (off-by-one bug with bugfix workflow), each with pre-populated `.teamwork/` state, handoffs, and a walkthrough README. (#55, PR #196)
+- **CLI and docs updated** — `docs/cli.md`, `docs/quick-reference.md`, and `docs/state-machines.md` updated to cover all new commands and checkpointing behavior. (PR #196)
+
+### Fixed
+
+- **Installer missing framework files** — `.github/workflows/` and `mcp-servers/` were silently excluded from `teamwork init` / `teamwork update` because they were absent from `FrameworkFiles`. The CI template (`teamwork-ci.yaml.example`) and all 5 Python MCP servers are now correctly installed. (PR #197)
+
+## [v1.6.0] — 2026-03-28
+
+### Added
+
+- **Project type detection in `setup-teamwork`** — Step 0 now detects project type (software, database, IaC, docs-only) from file indicators before analyzing the tech stack, recommending a tailored agent set. (#126)
+- **PR review sequence documented** — `docs/protocols.md` has an explicit Tester → Security Auditor → Reviewer sequence with conflict resolution rules. (#127)
+- **Agent escalation matrix** — `docs/protocols.md` covers all roles: who escalates to whom before involving the human, the protocol, and what escalation is not. (#128)
+- **Role-specific Project Knowledge** — All 8 core agent files now have role-appropriate `Project Knowledge` placeholders instead of identical generic copy-paste. (#132)
+- **Security Auditor broadened** — Checklist organized by project type: HTTP endpoints, database layer, infrastructure code (IaC), and CLI — no longer web-app-only. (#134)
+- **Conditional test/CI gates in workflow skills** — All 5 workflow skills distinguish projects with test infrastructure from those without; "tests must pass" is now conditional. (#135)
+- **Conditional `api-agent` install** — `setup-teamwork` skips `api-agent` when no API markers are detected in the project. (#137, PR #192)
+
 ## [v1.4.0] — 2026-03-25
 
 ### Changed

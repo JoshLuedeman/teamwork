@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/joshluedeman/teamwork/internal/metrics"
 	"github.com/spf13/cobra"
@@ -25,9 +28,18 @@ var metricsRolesCmd = &cobra.Command{
 	RunE:  runMetricsRoles,
 }
 
+var metricsAgentsCmd = &cobra.Command{
+	Use:   "agents",
+	Short: "Show per-agent performance scorecard",
+	RunE:  runMetricsAgents,
+}
+
 func init() {
+	metricsAgentsCmd.Flags().String("since", "", "Filter events after this duration ago (e.g. 24h, 7d)")
+	metricsAgentsCmd.Flags().String("format", "", "Output format: json")
 	metricsCmd.AddCommand(metricsSummaryCmd)
 	metricsCmd.AddCommand(metricsRolesCmd)
+	metricsCmd.AddCommand(metricsAgentsCmd)
 	rootCmd.AddCommand(metricsCmd)
 }
 
@@ -124,4 +136,77 @@ func formatDuration(seconds int) string {
 		return fmt.Sprintf("%dm%ds", seconds/60, seconds%60)
 	}
 	return fmt.Sprintf("%dh%dm", seconds/3600, (seconds%3600)/60)
+}
+
+func runMetricsAgents(cmd *cobra.Command, args []string) error {
+	dir, err := cmd.Flags().GetString("dir")
+	if err != nil {
+		return err
+	}
+
+	since, err := cmd.Flags().GetString("since")
+	if err != nil {
+		return err
+	}
+
+	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+
+	summaries, err := metrics.SummarizeAll(dir)
+	if err != nil {
+		return fmt.Errorf("loading metrics: %w", err)
+	}
+
+	allEvents, err := metrics.ReadAll(dir)
+	if err != nil {
+		return fmt.Errorf("loading events: %w", err)
+	}
+
+	// Apply --since filter to raw events.
+	if since != "" {
+		d, parseErr := parseDuration(since)
+		if parseErr != nil {
+			return fmt.Errorf("invalid --since value: %w", parseErr)
+		}
+		cutoff := time.Now().Add(-d)
+		var filtered []metrics.Event
+		for _, ev := range allEvents {
+			ts, parseErr := time.Parse(time.RFC3339, ev.Timestamp)
+			if parseErr != nil || ts.After(cutoff) {
+				filtered = append(filtered, ev)
+			}
+		}
+		allEvents = filtered
+	}
+
+	scores := metrics.ScoreByRole(summaries, allEvents)
+
+	if len(scores) == 0 {
+		fmt.Fprintln(cmd.OutOrStdout(), "No metrics data found.")
+		return nil
+	}
+
+	if format == "json" {
+		data, marshalErr := json.MarshalIndent(scores, "", "  ")
+		if marshalErr != nil {
+			return fmt.Errorf("marshaling JSON: %w", marshalErr)
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), string(data))
+		return nil
+	}
+
+	// Human-readable scorecard table.
+	w := cmd.OutOrStdout()
+	fmt.Fprintf(w, "%-20s  %5s  %9s  %6s  %12s\n",
+		"Role", "Steps", "Pass Rate", "Rework", "Avg Duration")
+	fmt.Fprintf(w, "%s\n", strings.Repeat("-", 60))
+	for _, s := range scores {
+		fmt.Fprintf(w, "%-20s  %5d  %8.1f%%  %6d  %12s\n",
+			s.Role, s.StepsTotal, s.PassRate*100, s.ReworkCount,
+			formatDuration(int(s.AvgDuration)))
+	}
+
+	return nil
 }

@@ -106,11 +106,14 @@ func TestIsFrameworkFile_Included(t *testing.T) {
 		".github/agents/roles/coder.md",
 		".github/skills/skill.md",
 		".github/instructions/inst.md",
+		".github/workflows/teamwork-ci.yaml.example",
 		".github/copilot-instructions.md",
 		".github/ISSUE_TEMPLATE/bug.md",
 		".github/PULL_REQUEST_TEMPLATE.md",
 		"docs/conventions.md",
 		"docs/glossary.md",
+		"mcp-servers/adr/pyproject.toml",
+		"mcp-servers/commits/src/server.py",
 		"scripts/build.sh",
 		"scripts/lint.sh",
 		".editorconfig",
@@ -138,7 +141,6 @@ func TestIsFrameworkFile_Excluded(t *testing.T) {
 		"CLAUDE.md",
 		".cursorrules",
 		"agents/roles/coder.md",
-		".github/workflows/ci.yaml",
 	}
 	for _, c := range cases {
 		if isFrameworkFile(c) {
@@ -627,7 +629,13 @@ func TestInstall_TeamworkConfigInstalled(t *testing.T) {
 }
 
 func TestFrameworkFiles_IncludesScriptsAndMakefile(t *testing.T) {
-	found := map[string]bool{"scripts/": false, "Makefile": false, ".teamwork/config.yaml": false}
+	found := map[string]bool{
+		"scripts/":             false,
+		"Makefile":             false,
+		".teamwork/config.yaml": false,
+		".github/workflows/":  false,
+		"mcp-servers/":        false,
+	}
 	for _, prefix := range FrameworkFiles {
 		if _, ok := found[prefix]; ok {
 			found[prefix] = true

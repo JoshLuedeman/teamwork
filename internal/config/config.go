@@ -68,11 +68,22 @@ type WorkflowsConfig struct {
 	ExtraGates map[string]map[string][]string  `yaml:"extra_gates"`
 }
 
+// CustomGate defines a user-defined shell-based quality gate that runs at
+// specific step boundaries. An empty OnStep list means the gate runs at every
+// step boundary.
+type CustomGate struct {
+	Name    string `yaml:"name"`
+	Command string `yaml:"command"`
+	OnStep  []int  `yaml:"on_step"` // empty = run at every step boundary
+}
+
 // QualityGatesConfig controls default quality gate enforcement.
 type QualityGatesConfig struct {
-	HandoffComplete bool `yaml:"handoff_complete"`
-	TestsPass       bool `yaml:"tests_pass"`
-	LintPass        bool `yaml:"lint_pass"`
+	HandoffComplete bool         `yaml:"handoff_complete"`
+	TestsPass       bool         `yaml:"tests_pass"`
+	LintPass        bool         `yaml:"lint_pass"`
+	SecretsGate     bool         `yaml:"secrets_scan"`
+	Custom          []CustomGate `yaml:"custom"`
 }
 
 // MemoryConfig controls structured memory management.

@@ -161,5 +161,14 @@ func renderTable(w interface{ Write([]byte) (int, error) }, workflows []*state.W
 		}
 	}
 
+	// Print custom gate results if any step records have them.
+	for _, wf := range workflows {
+		for _, s := range wf.Steps {
+			if s.CustomGates != "" {
+				fmt.Fprintf(w, "  [%s] step %d custom gates: %s\n", wf.ID, s.Step, s.CustomGates)
+			}
+		}
+	}
+
 	return nil
 }

@@ -179,7 +179,7 @@ func NewEngine(dir string) (*Engine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("workflow: load config: %w", err)
 	}
-	return &Engine{Dir: dir, Config: cfg}, nil
+	return &Engine{Dir: dir, Config: cfg, GateRunner: gates.ShellRunner{}}, nil
 }
 
 // lookupDefinition returns the WorkflowDefinition for the given type,
@@ -306,6 +306,23 @@ func (e *Engine) Next() ([]NextAction, error) {
 			}
 		}
 
+		// Surface any saved checkpoint for this step.
+		if cp, _ := state.LoadCheckpoint(e.Dir, ws.ID); cp != nil && cp.Step == ws.CurrentStep {
+			note := fmt.Sprintf("[checkpoint: step %d saved at %s", cp.Step, cp.SavedAt)
+			if len(cp.FilesModified) > 0 {
+				note += fmt.Sprintf(", files: %s", strings.Join(cp.FilesModified, ", "))
+			}
+			if cp.Notes != "" {
+				note += ", notes: " + cp.Notes
+			}
+			note += "]"
+			if na.Context != "" {
+				na.Context = na.Context + "\n" + note
+			} else {
+				na.Context = note
+			}
+		}
+
 		actions = append(actions, na)
 	}
 
@@ -359,6 +376,53 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 		}
 	}
 
+	// Run custom gates from config.QualityGates.Custom.
+	if e.Config != nil && len(e.Config.QualityGates.Custom) > 0 {
+		customGateResult := "passed"
+		for _, cg := range e.Config.QualityGates.Custom {
+			// Skip if OnStep is non-empty and current step is not listed.
+			if len(cg.OnStep) > 0 {
+				match := false
+				for _, s := range cg.OnStep {
+					if s == ws.CurrentStep {
+						match = true
+						break
+					}
+				}
+				if !match {
+					continue
+				}
+			}
+			runner := e.GateRunner
+			if runner == nil {
+				runner = gates.ShellRunner{}
+			}
+			_, passed, err := gates.RunGate(cg.Name, []string{cg.Command}, e.Dir, runner)
+			if err != nil {
+				return fmt.Errorf("workflow: run custom gate %q: %w", cg.Name, err)
+			}
+			if !passed {
+				customGateResult = "failed"
+				// Record failure on the step before returning.
+				for i := range ws.Steps {
+					if ws.Steps[i].Step == ws.CurrentStep && ws.Steps[i].Completed == "" {
+						ws.Steps[i].CustomGates = customGateResult
+						break
+					}
+				}
+				_ = ws.Save(e.Dir)
+				return fmt.Errorf("workflow: custom gate %q failed at step %d", cg.Name, ws.CurrentStep)
+			}
+		}
+		// Record successful custom gate result on the current step.
+		for i := range ws.Steps {
+			if ws.Steps[i].Step == ws.CurrentStep && ws.Steps[i].Completed == "" {
+				ws.Steps[i].CustomGates = customGateResult
+				break
+			}
+		}
+	}
+
 	// Log completion of the current step.
 	if err := metrics.LogComplete(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, artifact.Summary, durationSec); err != nil {
 		return fmt.Errorf("workflow: log complete: %w", err)
@@ -395,6 +459,9 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 		return fmt.Errorf("workflow: save state: %w", err)
 	}
 
+	// Clear any checkpoint for this workflow now that the step advanced.
+	_ = state.ClearCheckpoint(e.Dir, workflowID)
+
 	// Log start of the next step.
 	if err := metrics.LogStart(e.Dir, workflowID, ws.CurrentStep, ws.CurrentRole, nextAction); err != nil {
 		return fmt.Errorf("workflow: log next start: %w", err)
@@ -408,7 +475,7 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 // an error describing the first gate that has not passed, or nil if all
 // required gates are satisfied.
 func (e *Engine) enforceQualityGates(workflowID string, artifact *handoff.Artifact) error {
-	gates := e.Config.QualityGates
+	qgCfg := e.Config.QualityGates
 
 	type gate struct {
 		name    string
@@ -416,8 +483,8 @@ func (e *Engine) enforceQualityGates(workflowID string, artifact *handoff.Artifa
 	}
 
 	checks := []gate{
-		{"tests_pass", gates.TestsPass},
-		{"lint_pass", gates.LintPass},
+		{"tests_pass", qgCfg.TestsPass},
+		{"lint_pass", qgCfg.LintPass},
 	}
 
 	for _, g := range checks {
@@ -434,6 +501,23 @@ func (e *Engine) enforceQualityGates(workflowID string, artifact *handoff.Artifa
 			return fmt.Errorf("workflow: quality gate %q required but not reported in handoff", g.name)
 		}
 		return fmt.Errorf("workflow: quality gate %q failed", g.name)
+	}
+
+	// Run secrets gate if enabled.
+	if qgCfg.SecretsGate {
+		runner := e.GateRunner
+		if runner == nil {
+			runner = gates.ShellRunner{}
+		}
+		found, details, err := gates.RunSecretsGate(e.Dir, runner)
+		if err != nil {
+			return fmt.Errorf("workflow: secrets gate: %w", err)
+		}
+		if found {
+			_ = metrics.LogGate(e.Dir, workflowID, artifact.Step, artifact.Role, "secrets_scan", "failed: "+details)
+			return fmt.Errorf("workflow: secrets gate: secrets detected in repository")
+		}
+		_ = metrics.LogGate(e.Dir, workflowID, artifact.Step, artifact.Role, "secrets_scan", "passed")
 	}
 
 	return nil

@@ -1,0 +1,15 @@
+patterns:
+  - pattern: "Use -ldflags to inject version at build time in Go CLIs"
+    source: "feature/add-version-flag step 3 (architect)"
+    confidence: high
+    added_at: "2025-01-15T10:48:00Z"
+
+  - pattern: "Always add a fallback default (e.g. \"dev\") for build-time variables so the binary works with go run"
+    source: "feature/add-version-flag step 4 (coder)"
+    confidence: high
+    added_at: "2025-01-15T10:48:00Z"
+
+  - pattern: "Test CLI flags by building the binary and running it as a subprocess in tests"
+    source: "feature/add-version-flag step 5 (tester)"
+    confidence: medium
+    added_at: "2025-01-15T10:48:00Z"

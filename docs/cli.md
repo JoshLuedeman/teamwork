@@ -110,6 +110,8 @@ Fetches the latest framework files from the upstream Teamwork repository and app
 - `--source` — Source repository in `owner/repo` format (default: `joshluedeman/teamwork`)
 - `--ref` — Git ref to update to (branch, tag, or SHA; default: `main`)
 - `--force` — Overwrite user-modified files without warning
+- `--check` — Check for drift between local files and upstream without writing any changes (exits 1 if drift detected)
+- `--create-issue` — Create a GitHub issue assigned to Copilot when placeholders are detected after update (default: `true`)
 
 **Example:**
 ```bash
@@ -124,6 +126,9 @@ teamwork update --ref v1.2.0
 
 # Force update, overwriting local changes
 teamwork update --force
+
+# Check for drift without making changes (useful in CI)
+teamwork update --check
 ```
 
 ### `teamwork validate`
@@ -321,6 +326,129 @@ Runs diagnostic checks on the development environment and project configuration,
 - `0` — All checks passed (warnings are OK)
 - `1` — One or more checks failed
 
+### `teamwork scan`
+
+Run a secrets scan on the project.
+
+```bash
+teamwork scan
+```
+
+Scans the project directory for secrets using `gitleaks`, `detect-secrets`, or `trufflehog` (whichever is available). Exits `0` if the project is clean; exits `1` if secrets are found.
+
+### `teamwork timeline <id>`
+
+Show a visual timeline of workflow steps.
+
+```bash
+teamwork timeline <workflow-id> [flags]
+```
+
+Displays an ASCII table of workflow steps with status, duration, and handoff information.
+
+**Arguments:**
+- `id` — The workflow identifier
+
+**Flags:**
+- `--mermaid` — Emit a Mermaid Gantt diagram instead of an ASCII table
+
+**Example:**
+```bash
+teamwork timeline feature/42-auth
+teamwork timeline feature/42-auth --mermaid
+```
+
+### `teamwork resume <id>`
+
+Resume a workflow from a saved checkpoint.
+
+```bash
+teamwork resume <workflow-id> [flags]
+```
+
+Loads and displays a saved checkpoint for the given workflow, showing where work was interrupted so an agent can pick up without losing context.
+
+**Arguments:**
+- `id` — The workflow identifier
+
+**Flags:**
+- `--clear` — Delete the checkpoint without resuming
+
+**Example:**
+```bash
+teamwork resume feature/42-auth
+teamwork resume feature/42-auth --clear
+```
+
+### `teamwork report <id>`
+
+Generate an exportable workflow report.
+
+```bash
+teamwork report <workflow-id> [flags]
+```
+
+Builds a consolidated report including steps, handoffs, gate results, and cost estimates.
+
+**Arguments:**
+- `id` — The workflow identifier
+
+**Flags:**
+- `--format` — Output format: `md` (default), `json`, or `html`
+
+**Example:**
+```bash
+teamwork report feature/42-auth
+teamwork report feature/42-auth --format json
+teamwork report feature/42-auth --format html > report.html
+```
+
+### `teamwork search <query>`
+
+Search memory, handoffs, ADRs, and state for matching content.
+
+```bash
+teamwork search <query> [flags]
+```
+
+Searches across all `.teamwork/` artifacts for the given query string. Multi-word queries can be written without quotes.
+
+**Arguments:**
+- `query` — Search query (multi-word queries without quotes are joined automatically)
+
+**Flags:**
+- `--domain` — Filter memory results by domain tag
+- `--type` — Filter by artifact type: `memory`, `handoff`, `adr`, or `state`
+
+**Example:**
+```bash
+teamwork search authentication
+teamwork search "rate limiting" --type adr
+teamwork search auth --domain security
+```
+
+### `teamwork context <id>`
+
+Assemble distilled agent context for a workflow step.
+
+```bash
+teamwork context <workflow-id> [flags]
+```
+
+Gathers state, handoff, memory, and metrics data for the given workflow step and emits it as a compact context block suitable for pasting into an agent session.
+
+**Arguments:**
+- `id` — The workflow identifier
+
+**Flags:**
+- `--step` — Step number to assemble context for (default: current step)
+
+**Example:**
+```bash
+teamwork context feature/42-auth
+teamwork context feature/42-auth --step 3
+```
+
 ### `teamwork memory`
 
 Manage structured project memory.
@@ -411,6 +539,100 @@ Show per-role aggregate statistics across all workflows.
 
 ```bash
 teamwork metrics roles
+```
+
+#### `teamwork metrics agents`
+
+Show a per-agent performance scorecard including gate pass rate, escalation rate, and cost.
+
+```bash
+teamwork metrics agents [flags]
+```
+
+**Flags:**
+- `--since` — Filter events after this duration ago (e.g. `24h`, `7d`)
+- `--format` — Output format: `json`
+
+### `teamwork handoff`
+
+Manage handoff artifacts between workflow roles.
+
+```bash
+teamwork handoff <subcommand>
+```
+
+#### `teamwork handoff init <id>`
+
+Generate a role-specific handoff template for the current step of a workflow.
+
+```bash
+teamwork handoff init <workflow-id>
+```
+
+Creates a template handoff document at `.teamwork/handoffs/<id>/step-N-<role>.md` pre-filled with the role's expected outputs and acceptance criteria.
+
+**Arguments:**
+- `id` — The workflow identifier
+
+**Example:**
+```bash
+teamwork handoff init feature/42-auth
+```
+
+### `teamwork feedback`
+
+Manage structured reviewer feedback entries.
+
+```bash
+teamwork feedback <subcommand>
+```
+
+#### `teamwork feedback list`
+
+List feedback entries, optionally filtered by domain or status.
+
+```bash
+teamwork feedback list [flags]
+```
+
+**Flags:**
+- `--domain` — Filter by domain tag
+- `--status` — Filter by status: `open` or `resolved`
+
+#### `teamwork feedback resolve <id>`
+
+Mark a feedback entry as resolved.
+
+```bash
+teamwork feedback resolve <feedback-id>
+```
+
+### `teamwork analytics`
+
+View aggregate workflow analytics.
+
+```bash
+teamwork analytics <subcommand>
+```
+
+#### `teamwork analytics summary`
+
+Show aggregate workflow summary statistics across all workflows.
+
+```bash
+teamwork analytics summary [flags]
+```
+
+**Flags:**
+- `--since` — Only include workflows created after this duration ago (e.g. `24h`, `7d`)
+- `--type` — Filter by workflow type
+- `--format` — Output format: `json`
+
+**Example:**
+```bash
+teamwork analytics summary
+teamwork analytics summary --since 7d --type feature
+teamwork analytics summary --format json
 ```
 
 ### `teamwork repos`

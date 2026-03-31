@@ -1,0 +1,16 @@
+project:
+  name: counter
+  repo: owner/counter
+  type: go-lib
+
+model_tiers:
+  premium: claude-opus-4-5
+  standard: claude-sonnet-4-5
+  fast: claude-haiku-4-5
+
+quality_gates:
+  secrets_scan: false
+  require_tests: true
+
+workflows:
+  default: bugfix

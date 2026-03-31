@@ -704,6 +704,95 @@ func isAPIProject(dir string) bool {
 	return hasAnyDir(dir, []string{"api", "routes", "handlers", "endpoints"})
 }
 
+// DriftReport describes the difference between the local install and upstream.
+type DriftReport struct {
+	ModifiedLocally []string // framework files changed by user since install
+	AddedUpstream   []string // files in upstream manifest not present locally
+	DeletedLocally  []string // files in local manifest but missing from disk
+}
+
+// HasDrift reports whether any drift was detected.
+func (r *DriftReport) HasDrift() bool {
+	return len(r.ModifiedLocally) > 0 || len(r.AddedUpstream) > 0 || len(r.DeletedLocally) > 0
+}
+
+// CheckDrift fetches the upstream manifest and compares it against the local
+// install to detect files that have been modified, added, or deleted.
+func CheckDrift(dir, owner, repo, ref string) (*DriftReport, error) {
+	localManifest, err := readManifest(dir)
+	if err != nil {
+		return nil, fmt.Errorf("reading local manifest: %w", err)
+	}
+
+	upstreamFiles, _, err := fetchTarball(owner, repo, ref)
+	if err != nil {
+		return nil, fmt.Errorf("fetching upstream tarball: %w", err)
+	}
+
+	report := &DriftReport{}
+
+	// Build a set of upstream file paths → SHA for quick lookup.
+	upstreamHashes := make(map[string]string, len(upstreamFiles))
+	for _, f := range upstreamFiles {
+		upstreamHashes[f.Path] = sha256hex(f.Data)
+	}
+
+	// Check each upstream file against local manifest and disk.
+	for _, f := range upstreamFiles {
+		upstreamHash := sha256hex(f.Data)
+		localManifestHash, inLocalManifest := localManifest.Files[f.Path]
+
+		if !inLocalManifest {
+			// File exists upstream but not in local manifest → added upstream.
+			report.AddedUpstream = append(report.AddedUpstream, f.Path)
+			continue
+		}
+
+		if upstreamHash == localManifestHash {
+			// Upstream matches what was installed — no upstream change.
+			// Check if the user modified the file on disk.
+			diskData, err := os.ReadFile(filepath.Join(dir, f.Path))
+			if err != nil {
+				// File missing from disk and was in manifest → DeletedLocally (handled below).
+				continue
+			}
+			diskHash := sha256hex(diskData)
+			if diskHash != localManifestHash {
+				report.ModifiedLocally = append(report.ModifiedLocally, f.Path)
+			}
+			continue
+		}
+
+		// Upstream hash differs from local manifest hash — upstream has an update.
+		// If disk also differs from manifest, the user also modified it → drift.
+		diskData, err := os.ReadFile(filepath.Join(dir, f.Path))
+		if err != nil {
+			// File missing from disk.
+			continue
+		}
+		diskHash := sha256hex(diskData)
+		if diskHash != localManifestHash {
+			// Disk differs from what was installed → user modified it.
+			report.ModifiedLocally = append(report.ModifiedLocally, f.Path)
+		}
+		// If disk matches local manifest but differs from upstream → upstream update,
+		// not user drift. Don't report it here.
+	}
+
+	// Check each file in the local manifest that is missing from disk.
+	for path := range localManifest.Files {
+		if _, err := os.Stat(filepath.Join(dir, path)); os.IsNotExist(err) {
+			// Only report if the file is still in the upstream manifest too.
+			// (If upstream removed it, it's not drift — it's an expected deletion.)
+			if _, stillUpstream := upstreamHashes[path]; stillUpstream {
+				report.DeletedLocally = append(report.DeletedLocally, path)
+			}
+		}
+	}
+
+	return report, nil
+}
+
 func readManifest(dir string) (*Manifest, error) {
 	data, err := os.ReadFile(filepath.Join(dir, manifestPath))
 	if err != nil {

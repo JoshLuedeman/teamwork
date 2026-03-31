@@ -1395,3 +1395,135 @@ func TestUpdate_WithoutAPIMarkers_APIAgentNotInstalled(t *testing.T) {
 		t.Error("api-agent.agent.md should NOT be installed when no API markers are present during update")
 	}
 }
+
+// -- CheckDrift --
+
+// serveAndCheckDrift calls CheckDrift() with the same transport patching used by
+// serveAndInstall and serveAndUpdate.
+func serveAndCheckDrift(t *testing.T, dir string, tb []byte) (*DriftReport, error) {
+t.Helper()
+srv := newTestServer(tb)
+t.Cleanup(srv.Close)
+
+original := http.DefaultTransport
+http.DefaultTransport = &redirectTransport{target: srv.URL, base: &http.Transport{}}
+t.Cleanup(func() { http.DefaultTransport = original })
+
+return CheckDrift(dir, "JoshLuedeman", "teamwork", "main")
+}
+
+func TestCheckDrift_CleanInstall(t *testing.T) {
+dir := t.TempDir()
+
+// Install from upstream v1.
+tb1 := makeTarball(testPrefix, map[string]string{
+".editorconfig": "v1 content\n",
+"Makefile":      "build:\n\tgo build\n",
+})
+if err := serveAndInstall(t, dir, tb1); err != nil {
+t.Fatalf("Install: %v", err)
+}
+
+// CheckDrift against the same upstream (no changes).
+report, err := serveAndCheckDrift(t, dir, tb1)
+if err != nil {
+t.Fatalf("CheckDrift: %v", err)
+}
+
+if report.HasDrift() {
+t.Errorf("expected no drift on a clean install; got ModifiedLocally=%v AddedUpstream=%v DeletedLocally=%v",
+report.ModifiedLocally, report.AddedUpstream, report.DeletedLocally)
+}
+}
+
+func TestCheckDrift_ModifiedLocalFile(t *testing.T) {
+dir := t.TempDir()
+
+tb := makeTarball(testPrefix, map[string]string{
+".editorconfig": "original content\n",
+"Makefile":      "build:\n\tgo build\n",
+})
+if err := serveAndInstall(t, dir, tb); err != nil {
+t.Fatalf("Install: %v", err)
+}
+
+// Simulate user modification of .editorconfig.
+if err := os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte("user-modified content\n"), 0o644); err != nil {
+t.Fatalf("WriteFile: %v", err)
+}
+
+report, err := serveAndCheckDrift(t, dir, tb)
+if err != nil {
+t.Fatalf("CheckDrift: %v", err)
+}
+
+if len(report.ModifiedLocally) != 1 || report.ModifiedLocally[0] != ".editorconfig" {
+t.Errorf("expected ModifiedLocally=[.editorconfig], got %v", report.ModifiedLocally)
+}
+if len(report.AddedUpstream) != 0 {
+t.Errorf("expected no AddedUpstream, got %v", report.AddedUpstream)
+}
+if len(report.DeletedLocally) != 0 {
+t.Errorf("expected no DeletedLocally, got %v", report.DeletedLocally)
+}
+}
+
+func TestCheckDrift_DeletedLocalFile(t *testing.T) {
+dir := t.TempDir()
+
+tb := makeTarball(testPrefix, map[string]string{
+".editorconfig": "root = true\n",
+"Makefile":      "build:\n\tgo build\n",
+})
+if err := serveAndInstall(t, dir, tb); err != nil {
+t.Fatalf("Install: %v", err)
+}
+
+// Simulate user deleting Makefile.
+if err := os.Remove(filepath.Join(dir, "Makefile")); err != nil {
+t.Fatalf("Remove: %v", err)
+}
+
+report, err := serveAndCheckDrift(t, dir, tb)
+if err != nil {
+t.Fatalf("CheckDrift: %v", err)
+}
+
+if len(report.DeletedLocally) != 1 || report.DeletedLocally[0] != "Makefile" {
+t.Errorf("expected DeletedLocally=[Makefile], got %v", report.DeletedLocally)
+}
+if len(report.ModifiedLocally) != 0 {
+t.Errorf("expected no ModifiedLocally, got %v", report.ModifiedLocally)
+}
+}
+
+func TestCheckDrift_AddedUpstream(t *testing.T) {
+dir := t.TempDir()
+
+// Install v1 with only .editorconfig.
+tb1 := makeTarball(testPrefix, map[string]string{
+".editorconfig": "root = true\n",
+})
+if err := serveAndInstall(t, dir, tb1); err != nil {
+t.Fatalf("Install: %v", err)
+}
+
+// Upstream v2 adds a new file.
+const upstreamPrefix = "JoshLuedeman-teamwork-upstream2345/"
+tb2 := makeTarball(upstreamPrefix, map[string]string{
+".editorconfig": "root = true\n",
+"Makefile":      "build:\n\tgo build\n",
+})
+
+report, err := serveAndCheckDrift(t, dir, tb2)
+if err != nil {
+t.Fatalf("CheckDrift: %v", err)
+}
+
+if len(report.AddedUpstream) != 1 || report.AddedUpstream[0] != "Makefile" {
+t.Errorf("expected AddedUpstream=[Makefile], got %v", report.AddedUpstream)
+}
+if len(report.ModifiedLocally) != 0 {
+t.Errorf("expected no ModifiedLocally, got %v", report.ModifiedLocally)
+}
+}

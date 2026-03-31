@@ -42,14 +42,15 @@ type WorkflowState struct {
 
 // StepRecord captures the execution of a single workflow step.
 type StepRecord struct {
-	Step        int    `yaml:"step" json:"step"`
-	Role        string `yaml:"role" json:"role"`
-	Action      string `yaml:"action" json:"action"`
-	Started     string `yaml:"started" json:"started"`
-	Completed   string `yaml:"completed,omitempty" json:"completed,omitempty"`
-	Handoff     string `yaml:"handoff,omitempty" json:"handoff,omitempty"`
-	QualityGate string `yaml:"quality_gate,omitempty" json:"quality_gate,omitempty"`
-	Repo        string `yaml:"repo,omitempty" json:"repo,omitempty"`
+	Step         int    `yaml:"step" json:"step"`
+	Role         string `yaml:"role" json:"role"`
+	Action       string `yaml:"action" json:"action"`
+	Started      string `yaml:"started" json:"started"`
+	Completed    string `yaml:"completed,omitempty" json:"completed,omitempty"`
+	Handoff      string `yaml:"handoff,omitempty" json:"handoff,omitempty"`
+	QualityGate  string `yaml:"quality_gate,omitempty" json:"quality_gate,omitempty"`
+	Repo         string `yaml:"repo,omitempty" json:"repo,omitempty"`
+	CustomGates  string `yaml:"custom_gates,omitempty" json:"custom_gates,omitempty"`
 }
 
 // Blocker records a reason a workflow cannot proceed.

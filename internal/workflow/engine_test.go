@@ -367,3 +367,200 @@ func TestHandoff_QualityGates(t *testing.T) {
 		})
 	}
 }
+
+// TestCustomGate_RunsAtMatchingStep verifies that a custom gate with OnStep=[4]
+// is executed when the workflow is on step 4, and that the step record is
+// annotated with "passed".
+func TestCustomGate_RunsAtMatchingStep(t *testing.T) {
+	dir := t.TempDir()
+	for _, sub := range []string{"state/feature", "handoffs", "metrics"} {
+		if err := os.MkdirAll(filepath.Join(dir, ".teamwork", sub), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+
+	ws := state.New("feature/1-test", "feature", "Test goal")
+	ws.CurrentStep = 4
+	ws.CurrentRole = "coder"
+	ws.Steps = []state.StepRecord{
+		{Step: 4, Role: "coder", Action: "Implement", Started: "2025-01-01T00:00:00Z"},
+	}
+	if err := ws.Save(dir); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	runner := &mockGateRunner{} // returns exit 0 (pass)
+	eng := &Engine{
+		Dir: dir,
+		Config: &config.Config{
+			QualityGates: config.QualityGatesConfig{
+				Custom: []config.CustomGate{
+					{Name: "my-gate", Command: "echo ok", OnStep: []int{4}},
+				},
+			},
+		},
+		GateRunner: runner,
+	}
+
+	artifact := validArtifact(nil)
+	if err := eng.Handoff("feature/1-test", artifact); err != nil {
+		t.Fatalf("Handoff() unexpected error: %v", err)
+	}
+
+	// Runner should have been called once for the custom gate.
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 gate runner call, got %d: %v", len(runner.calls), runner.calls)
+	}
+
+	// Step record should be annotated with "passed".
+	ws2, err := state.Load(dir, "feature/1-test")
+	if err != nil {
+		t.Fatalf("load state: %v", err)
+	}
+	for _, sr := range ws2.Steps {
+		if sr.Step == 4 && sr.CustomGates != "passed" {
+			t.Errorf("step 4 CustomGates = %q, want %q", sr.CustomGates, "passed")
+		}
+	}
+}
+
+// TestCustomGate_SkippedForOtherStep verifies that a custom gate with
+// OnStep=[3] is NOT executed when the workflow is on step 4.
+func TestCustomGate_SkippedForOtherStep(t *testing.T) {
+	dir := t.TempDir()
+	for _, sub := range []string{"state/feature", "handoffs", "metrics"} {
+		if err := os.MkdirAll(filepath.Join(dir, ".teamwork", sub), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+
+	ws := state.New("feature/1-test", "feature", "Test goal")
+	ws.CurrentStep = 4
+	ws.CurrentRole = "coder"
+	ws.Steps = []state.StepRecord{
+		{Step: 4, Role: "coder", Action: "Implement", Started: "2025-01-01T00:00:00Z"},
+	}
+	if err := ws.Save(dir); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	runner := &mockGateRunner{}
+	eng := &Engine{
+		Dir: dir,
+		Config: &config.Config{
+			QualityGates: config.QualityGatesConfig{
+				Custom: []config.CustomGate{
+					{Name: "step3-only", Command: "echo nope", OnStep: []int{3}},
+				},
+			},
+		},
+		GateRunner: runner,
+	}
+
+	if err := eng.Handoff("feature/1-test", validArtifact(nil)); err != nil {
+		t.Fatalf("Handoff() unexpected error: %v", err)
+	}
+
+	if len(runner.calls) != 0 {
+		t.Errorf("expected 0 gate runner calls for step-skipped gate, got %d", len(runner.calls))
+	}
+}
+
+// TestCustomGate_FailureBlocksAdvance verifies that a custom gate returning a
+// non-zero exit code prevents workflow advancement.
+func TestCustomGate_FailureBlocksAdvance(t *testing.T) {
+	dir := t.TempDir()
+	for _, sub := range []string{"state/feature", "handoffs", "metrics"} {
+		if err := os.MkdirAll(filepath.Join(dir, ".teamwork", sub), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+
+	ws := state.New("feature/1-test", "feature", "Test goal")
+	ws.CurrentStep = 4
+	ws.CurrentRole = "coder"
+	ws.Steps = []state.StepRecord{
+		{Step: 4, Role: "coder", Action: "Implement", Started: "2025-01-01T00:00:00Z"},
+	}
+	if err := ws.Save(dir); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	exitErr := realExitError()
+
+	runner := &mockGateRunner{
+		outputs: []string{"gate failed output"},
+		errs:    []error{exitErr},
+	}
+	eng := &Engine{
+		Dir: dir,
+		Config: &config.Config{
+			QualityGates: config.QualityGatesConfig{
+				Custom: []config.CustomGate{
+					{Name: "failing-gate", Command: "exit 1", OnStep: []int{4}},
+				},
+			},
+		},
+		GateRunner: runner,
+	}
+
+	err := eng.Handoff("feature/1-test", validArtifact(nil))
+	if err == nil {
+		t.Fatal("expected error from failing custom gate, got nil")
+	}
+	if !strings.Contains(err.Error(), "failing-gate") {
+		t.Errorf("expected error to mention gate name, got: %v", err)
+	}
+
+	// Workflow should still be on step 4 (not advanced).
+	ws2, err2 := state.Load(dir, "feature/1-test")
+	if err2 != nil {
+		t.Fatalf("load state: %v", err2)
+	}
+	if ws2.CurrentStep != 4 {
+		t.Errorf("expected workflow to stay on step 4, got %d", ws2.CurrentStep)
+	}
+}
+
+// TestCustomGate_EmptyOnStep_RunsAtEveryStep verifies that a custom gate with
+// an empty OnStep list runs at every step boundary.
+func TestCustomGate_EmptyOnStep_RunsAtEveryStep(t *testing.T) {
+	dir := t.TempDir()
+	for _, sub := range []string{"state/feature", "handoffs", "metrics"} {
+		if err := os.MkdirAll(filepath.Join(dir, ".teamwork", sub), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+
+	ws := state.New("feature/1-test", "feature", "Test goal")
+	ws.CurrentStep = 4
+	ws.CurrentRole = "coder"
+	ws.Steps = []state.StepRecord{
+		{Step: 4, Role: "coder", Action: "Implement", Started: "2025-01-01T00:00:00Z"},
+	}
+	if err := ws.Save(dir); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+
+	runner := &mockGateRunner{} // returns exit 0 (pass)
+	eng := &Engine{
+		Dir: dir,
+		Config: &config.Config{
+			QualityGates: config.QualityGatesConfig{
+				Custom: []config.CustomGate{
+					// OnStep is empty → runs at every step.
+					{Name: "always-gate", Command: "echo always"},
+				},
+			},
+		},
+		GateRunner: runner,
+	}
+
+	if err := eng.Handoff("feature/1-test", validArtifact(nil)); err != nil {
+		t.Fatalf("Handoff() unexpected error: %v", err)
+	}
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 call for always-running gate, got %d", len(runner.calls))
+	}
+}

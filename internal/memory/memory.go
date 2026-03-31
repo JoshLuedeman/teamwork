@@ -26,6 +26,76 @@ type Entry struct {
 	Context string   `yaml:"context"`
 }
 
+// FeedbackEntry captures structured reviewer or agent feedback for a workflow.
+type FeedbackEntry struct {
+	ID       string   `yaml:"id"`
+	Date     string   `yaml:"date"`
+	Source   string   `yaml:"source"` // "pr#N" or "workflow/step"
+	Domain   []string `yaml:"domain"`
+	Feedback string   `yaml:"feedback"`
+	Status   string   `yaml:"status"` // "open" | "resolved"
+}
+
+// FeedbackFile holds all feedback entries in .teamwork/memory/feedback.yaml.
+type FeedbackFile struct {
+	Entries []FeedbackEntry `yaml:"entries"`
+}
+
+// feedbackPath returns the path to the feedback YAML file.
+func feedbackPath(dir string) string {
+	return filepath.Join(dir, ".teamwork", "memory", "feedback.yaml")
+}
+
+// LoadFeedback loads all feedback entries from .teamwork/memory/feedback.yaml.
+func LoadFeedback(dir string) (*FeedbackFile, error) {
+	p := feedbackPath(dir)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &FeedbackFile{}, nil
+		}
+		return nil, fmt.Errorf("reading feedback file: %w", err)
+	}
+	var ff FeedbackFile
+	if err := yaml.Unmarshal(data, &ff); err != nil {
+		return nil, fmt.Errorf("parsing feedback file: %w", err)
+	}
+	return &ff, nil
+}
+
+// SaveFeedback writes all feedback entries to .teamwork/memory/feedback.yaml.
+func SaveFeedback(dir string, ff *FeedbackFile) error {
+	p := feedbackPath(dir)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return fmt.Errorf("creating memory directory: %w", err)
+	}
+	data, err := yaml.Marshal(ff)
+	if err != nil {
+		return fmt.Errorf("marshaling feedback: %w", err)
+	}
+	return os.WriteFile(p, data, 0o644)
+}
+
+// AppendFeedback appends a single feedback entry to .teamwork/memory/feedback.yaml.
+// It auto-generates an ID and date if they are empty.
+func AppendFeedback(dir string, entry FeedbackEntry) error {
+	ff, err := LoadFeedback(dir)
+	if err != nil {
+		return fmt.Errorf("loading feedback: %w", err)
+	}
+	if entry.ID == "" {
+		entry.ID = fmt.Sprintf("feedback-%03d", len(ff.Entries)+1)
+	}
+	if entry.Date == "" {
+		entry.Date = time.Now().UTC().Format("2006-01-02")
+	}
+	if entry.Status == "" {
+		entry.Status = "open"
+	}
+	ff.Entries = append(ff.Entries, entry)
+	return SaveFeedback(dir, ff)
+}
+
 // MemoryFile holds all entries for a single memory category.
 type MemoryFile struct {
 	Entries []Entry `yaml:"entries"`

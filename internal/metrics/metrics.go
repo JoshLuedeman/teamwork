@@ -304,3 +304,118 @@ func metricsPath(dir, workflowID string) string {
 	safe := strings.ReplaceAll(workflowID, "/", "__")
 	return filepath.Join(dir, ".teamwork", "metrics", safe+".jsonl")
 }
+
+// ReadAll reads all events from all JSONL files in .teamwork/metrics/ and
+// returns them as a single flat slice.
+func ReadAll(dir string) ([]Event, error) {
+	metricsDir := filepath.Join(dir, ".teamwork", "metrics")
+	entries, err := os.ReadDir(metricsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read metrics directory: %w", err)
+	}
+
+	var all []Event
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
+			continue
+		}
+		name := strings.TrimSuffix(entry.Name(), ".jsonl")
+		workflowID := strings.ReplaceAll(name, "__", "/")
+		events, err := Load(dir, workflowID)
+		if err != nil {
+			return nil, fmt.Errorf("load events for %s: %w", workflowID, err)
+		}
+		all = append(all, events...)
+	}
+	return all, nil
+}
+
+// RoleScore holds per-role effectiveness metrics.
+type RoleScore struct {
+	Role        string
+	StepsTotal  int
+	PassRate    float64 // quality gate passes / total gated steps
+	ReworkCount int     // count of retry + rollback events for this role
+	AvgDuration float64 // average seconds per completed step
+}
+
+// ScoreByRole computes per-role effectiveness metrics from a set of summaries
+// and the raw events read from the metrics directory.
+// summaries are used for role durations; events are used for gate and rework data.
+func ScoreByRole(summaries []*Summary, events []Event) []RoleScore {
+	type roleData struct {
+		durationTotal int
+		durationCount int
+		gatePassed    int
+		gateTotal     int
+		reworkCount   int
+	}
+
+	data := make(map[string]*roleData)
+
+	ensureRole := func(role string) *roleData {
+		if _, ok := data[role]; !ok {
+			data[role] = &roleData{}
+		}
+		return data[role]
+	}
+
+	// Aggregate durations from summaries.
+	for _, s := range summaries {
+		for role, dur := range s.RoleDurations {
+			rd := ensureRole(role)
+			if dur > 0 {
+				rd.durationTotal += dur
+				rd.durationCount++
+			}
+		}
+	}
+
+	// Scan raw events for gate results and rework.
+	for _, ev := range events {
+		if ev.Role == "" {
+			continue
+		}
+		rd := ensureRole(ev.Role)
+		switch ev.Action {
+		case ActionQualityGate:
+			rd.gateTotal++
+			if ev.Result == "passed" {
+				rd.gatePassed++
+			}
+		case ActionRetry, ActionRollback:
+			rd.reworkCount++
+		}
+	}
+
+	var scores []RoleScore
+	for role, rd := range data {
+		var passRate float64
+		if rd.gateTotal > 0 {
+			passRate = float64(rd.gatePassed) / float64(rd.gateTotal)
+		}
+		var avgDur float64
+		if rd.durationCount > 0 {
+			avgDur = float64(rd.durationTotal) / float64(rd.durationCount)
+		}
+		scores = append(scores, RoleScore{
+			Role:        role,
+			StepsTotal:  rd.durationCount,
+			PassRate:    passRate,
+			ReworkCount: rd.reworkCount,
+			AvgDuration: avgDur,
+		})
+	}
+
+	// Sort by role name for deterministic output.
+	for i := 1; i < len(scores); i++ {
+		for j := i; j > 0 && scores[j].Role < scores[j-1].Role; j-- {
+			scores[j], scores[j-1] = scores[j-1], scores[j]
+		}
+	}
+
+	return scores
+}

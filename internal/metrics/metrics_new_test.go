@@ -96,3 +96,77 @@ func TestDefectEscapeRateZero(t *testing.T) {
 		t.Errorf("DefectEscapeRate = %f, want 0", rate)
 	}
 }
+
+func TestScoreByRole_PassRateAndRework(t *testing.T) {
+	summaries := []*Summary{
+		{
+			WorkflowID:    "feature/1-test",
+			RoleDurations: map[string]int{"coder": 300, "tester": 120},
+		},
+	}
+
+	events := []Event{
+		{Role: "coder", Action: ActionQualityGate, Result: "passed"},
+		{Role: "coder", Action: ActionQualityGate, Result: "passed"},
+		{Role: "coder", Action: ActionQualityGate, Result: "failed"},
+		{Role: "coder", Action: ActionRetry},
+		{Role: "tester", Action: ActionQualityGate, Result: "passed"},
+	}
+
+	scores := ScoreByRole(summaries, events)
+	if len(scores) == 0 {
+		t.Fatal("expected non-empty scores")
+	}
+
+	var coderScore *RoleScore
+	var testerScore *RoleScore
+	for i := range scores {
+		if scores[i].Role == "coder" {
+			coderScore = &scores[i]
+		}
+		if scores[i].Role == "tester" {
+			testerScore = &scores[i]
+		}
+	}
+
+	if coderScore == nil {
+		t.Fatal("expected coder score")
+	}
+	// 2 passed / 3 total = 0.666...
+	if coderScore.PassRate < 0.66 || coderScore.PassRate > 0.67 {
+		t.Errorf("coder pass rate = %.3f, want ~0.666", coderScore.PassRate)
+	}
+	if coderScore.ReworkCount != 1 {
+		t.Errorf("coder rework count = %d, want 1", coderScore.ReworkCount)
+	}
+
+	if testerScore == nil {
+		t.Fatal("expected tester score")
+	}
+	if testerScore.PassRate != 1.0 {
+		t.Errorf("tester pass rate = %.3f, want 1.0", testerScore.PassRate)
+	}
+}
+
+func TestReadAll_ReadsAllWorkflows(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".teamwork", "metrics"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Log events for two different workflows.
+	if err := LogStart(dir, "feature/1-auth", 1, "coder", "start"); err != nil {
+		t.Fatal(err)
+	}
+	if err := LogStart(dir, "bugfix/2-fix", 1, "tester", "start"); err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := ReadAll(dir)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if len(events) != 2 {
+		t.Errorf("expected 2 events, got %d", len(events))
+	}
+}

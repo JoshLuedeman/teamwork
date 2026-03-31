@@ -13,6 +13,7 @@ import (
 	"github.com/joshluedeman/teamwork/internal/config"
 	"github.com/joshluedeman/teamwork/internal/gates"
 	"github.com/joshluedeman/teamwork/internal/handoff"
+	"github.com/joshluedeman/teamwork/internal/memory"
 	"github.com/joshluedeman/teamwork/internal/metrics"
 	"github.com/joshluedeman/teamwork/internal/state"
 )
@@ -216,6 +217,16 @@ func CustomDefinition(cfg *config.Config, wfType string) (WorkflowDefinition, bo
 func IsBuiltinType(wfType string) bool {
 	_, ok := definitions[wfType]
 	return ok
+}
+
+// DefinitionFor returns the workflow definition for the given type,
+// checking built-in definitions first and then custom config definitions.
+// Returns false if the type is not known.
+func DefinitionFor(cfg *config.Config, wfType string) (WorkflowDefinition, bool) {
+	if def, ok := definitions[wfType]; ok {
+		return def, true
+	}
+	return CustomDefinition(cfg, wfType)
 }
 
 // Start initializes a new workflow. It generates an ID from the workflow type,
@@ -457,6 +468,17 @@ func (e *Engine) Handoff(workflowID string, artifact *handoff.Artifact) error {
 
 	if err := ws.Save(e.Dir); err != nil {
 		return fmt.Errorf("workflow: save state: %w", err)
+	}
+
+	// If this is a reviewer handoff containing "changes requested", capture feedback.
+	if strings.ToLower(artifact.Role) == "reviewer" &&
+		strings.Contains(strings.ToLower(artifact.Render()), "changes requested") {
+		_ = memory.AppendFeedback(e.Dir, memory.FeedbackEntry{
+			Source:   workflowID,
+			Domain:   []string{ws.Type},
+			Feedback: artifact.Summary,
+			Status:   "open",
+		})
 	}
 
 	// Clear any checkpoint for this workflow now that the step advanced.

@@ -35,7 +35,8 @@ A human decides the codebase is ready for a new release. This may be driven by:
 | 6 | **Coder** | Creates release branch or tag; bumps version numbers in code and config files | Version number, release notes | Release branch/tag, version-bumped source files, PR | Version numbers consistent across all files; branch/tag created |
 | 7 | **Reviewer** | Final review — verifies changelog accuracy, version consistency, release readiness | PR, changelog, release notes, test results, security scan | Review decision, release sign-off | All artifacts consistent; no blockers; PR approved |
 | 8 | **Human** | Approves the release; merges PR; publishes release (tag, GitHub Release, package registry) | Approved PR, release notes | Published release, deployment triggered | Release published; artifacts available to users |
-| 9 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
+| 8a | **Coder** | Sync `gh-teamwork` extension: update bash script flag passthrough, usage text, and README to match any new or changed `teamwork` CLI flags and subcommands; tag with matching version | Published teamwork release, `docs/releasing.md` sync checklist | Updated `gh-teamwork` repo, matching version tag | All new flags/subcommands pass through correctly; README documents them; version tags match |
+| 9 | **Orchestrator** | Complete workflow: validate all gates passed (including gh-teamwork sync), update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
 
@@ -82,6 +83,17 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - GitHub PR review: approved or changes requested
 - Release readiness checklist confirmation
 
+**Human → Coder (gh-teamwork sync)**
+- Published teamwork release (version tag and GitHub Release URL)
+- List of new or changed CLI flags and subcommands since last gh-teamwork release
+- Reference: `docs/releasing.md` dual-repo sync checklist
+
+**Coder (gh-teamwork sync) → Orchestrator**
+- Updated `gh-teamwork` bash script with all flag/subcommand changes
+- Updated `gh-teamwork` README reflecting new capabilities
+- Matching version tag created in the gh-teamwork repo
+- End-to-end verification: `gh teamwork init` tested in a fresh repo
+
 ## Completion Criteria
 
 - All planned items are accounted for in the changelog (included or explicitly deferred).
@@ -91,6 +103,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - Changelog and release notes are complete and accurate.
 - Release tag or branch is created and points to the correct commit.
 - Release is published and artifacts are available to users.
+- The `gh-teamwork` extension is updated, tagged with the matching version, and verified end-to-end.
 
 ## Notes
 

@@ -18,6 +18,7 @@ You are the Coder. You implement tasks by writing code. You take well-defined ta
 - **Test Command:** [e.g., `npm test`, `make test`]
 - **Lint Command:** [e.g., `npm run lint`, `golangci-lint run`]
 - **PR Conventions:** [e.g., title must follow Conventional Commits; link issue with "Closes #N"; one task per PR]
+- **Dual-repo structure:** The `gh-teamwork` extension (JoshLuedeman/gh-teamwork) wraps this CLI as a `gh` plugin. When adding or changing CLI flags/subcommands, the extension must be updated in lockstep. See `docs/releasing.md` for the sync process
 
 ## Model Requirements
 

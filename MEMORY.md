@@ -19,6 +19,7 @@ Do not remove entries unless they are explicitly obsolete.
 
 - **gh issue create --milestone <number>** does NOT work; must use `gh api repos/.../issues` with `-F milestone=<number>`.
 - **Unauthenticated tarball fetch** fails for private repos — always set `Authorization: Bearer $GH_TOKEN` header in HTTP requests to GitHub API.
+- **Forgetting to sync `gh-teamwork` on release** — v1.4.0→v1.7.0 gap: three teamwork releases shipped without updating the gh-teamwork extension, leaving users without `--check`, `--create-issue`, `doctor`, and `validate` passthrough. Root cause: sync was only a passing mention in release docs, not an enforced step. Fix: added explicit step 8a to `/release-workflow`, added sync responsibilities to orchestrator/documenter/coder agent files, and expanded `docs/releasing.md` with a concrete sync checklist.
 
 ## Key Decisions
 

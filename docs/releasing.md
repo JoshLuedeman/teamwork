@@ -144,18 +144,41 @@ Two repositories release together with matching version numbers:
 | Repo | Purpose |
 |------|---------|
 | [JoshLuedeman/teamwork](https://github.com/JoshLuedeman/teamwork) | Go CLI + template files + MCP servers |
-| [JoshLuedeman/gh-teamwork](https://github.com/JoshLuedeman/gh-teamwork) | GitHub CLI extension wrapping `teamwork install`/`update` |
+| [JoshLuedeman/gh-teamwork](https://github.com/JoshLuedeman/gh-teamwork) | GitHub CLI extension wrapping `teamwork init`/`update`/`doctor`/`validate` |
 
-### Process
+### Sync Checklist
 
-1. **Release `teamwork` first.** Complete the full release checklist
-   (tag, binaries, GitHub Release).
-2. **Update `gh-teamwork`** to reference the new teamwork version
-   (update the download URL or version constant).
-3. **Release `gh-teamwork`** with the same version tag (e.g., both repos
-   tag `v1.1.0`).
-4. **Verify end-to-end.** Run `gh teamwork init` in a fresh repo to
-   confirm the extension fetches the correct teamwork version.
+After releasing `teamwork`, complete every item before tagging `gh-teamwork`:
+
+1. **Audit CLI changes.** Compare `teamwork --help`, `teamwork init --help`,
+   and `teamwork update --help` against the `gh-teamwork` bash script. Look
+   for:
+   - New or renamed flags (especially flags with values vs booleans)
+   - New subcommands that users would naturally reach for via `gh teamwork`
+     (setup, health-check, and validation commands belong; workflow commands
+     like `start`, `next`, `complete` do not)
+   - Changed flag defaults or removed flags
+
+2. **Update flag passthrough.** For each new flag:
+   - Add it to the correct `parse_*_flags()` function in the bash script
+   - Boolean flags: add a `--flag) FLAGS+=(--flag); shift ;;` case
+   - Value flags: add a `--flag) [[ $# -ge 2 ]] || { echo "Missing value for --flag"; exit 1; }; FLAGS+=(--flag "$2"); shift 2 ;;` case
+   - If the Go CLI uses `--no-<flag>` negation, map it to `--flag=false`
+
+3. **Update usage text.** Add new flags and subcommands to the `usage()`
+   function in the bash script, organized by subcommand.
+
+4. **Update README.md.** Add new subcommands, flags, and usage examples to
+   the gh-teamwork README.
+
+5. **Commit and tag.** Use a conventional commit message
+   (`feat: sync with teamwork vX.Y.Z`) and create an annotated tag matching
+   the teamwork version.
+
+6. **Verify end-to-end.** Run `gh teamwork init` in a fresh repo and confirm
+   the extension fetches the correct teamwork version and all new flags work.
+
+### Version Policy
 
 Both releases use the same version number. If only `gh-teamwork` needs a
 fix, release it as a PATCH and note the version divergence in its
@@ -182,7 +205,8 @@ What it does:
 5. Creates a GitHub Release with binaries attached via `gh release create`
 
 You still need to manually: update the changelog (step 3 of the
-checklist), sync `gh-teamwork`, and close the milestone.
+checklist), sync `gh-teamwork` (follow the [Sync Checklist](#sync-checklist)
+above), and close the milestone.
 
 ## Version Embedding
 

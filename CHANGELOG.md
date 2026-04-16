@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.8.0] — 2026-04-16
+
+### Added
+
+- **gh-teamwork sync enforcement in release workflow** — Added explicit step 8a to `/release-workflow` skill requiring `gh-teamwork` extension sync before a release is marked complete, with handoff contracts and acceptance criteria. (#198)
+- **Dual-repo sync checklist in docs/releasing.md** — Replaced vague 4-step process with a concrete 6-item checklist: audit CLI changes, update flag passthrough, update usage text, update README, commit/tag, verify end-to-end. (#198)
+- **Agent responsibilities for gh-teamwork sync** — Orchestrator verifies dual-repo sync during releases; Documenter updates gh-teamwork README; Coder's Project Knowledge notes dual-repo structure. (#198)
+
+### Fixed
+
+- **MEMORY.md documents v1.4.0→v1.7.0 version gap** — Recorded the gh-teamwork sync gap as a "Pattern to Avoid" with root cause (no enforcement) and fix (process changes above). (#198)
+
 ## [v1.7.0] — 2026-03-31
 
 ### Added
